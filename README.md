@@ -25,6 +25,7 @@ Watch our demo here: https://youtu.be/A9cvBl_3fYc
 
 If the robot stops during interaction because of reflex, go to change this parameters:
 in /src/franka_ros/franka_control/config/franka_control_node.yaml
+
 #Configure the initial defaults for the collision behavior reflexes.
 collision_config:
   lower_torque_thresholds_acceleration: [50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0]  # [Nm]
