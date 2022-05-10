@@ -18,7 +18,21 @@ To run the demo of teaching the robot where and how to place a paper cup:
 - Run the main file: python3 main.py
 
 The robot will move to make the gripper face down, and then switch to gravity compensation.
-The robot kan now be moved to the desired initial end-effector position.
+The robot can now be moved to the desired initial end-effector position.
 Upon pressing enter, the model is further initialized and the Episodes can be started and quit via the keyboard.
 
 Watch our demo here: https://youtu.be/A9cvBl_3fYc
+
+If the robot stops during interaction because of reflex, go to change this parameters:
+in /src/franka_ros/franka_control/config/franka_control_node.yaml
+# Configure the initial defaults for the collision behavior reflexes.
+collision_config:
+  lower_torque_thresholds_acceleration: [50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0]  # [Nm]
+  upper_torque_thresholds_acceleration: [50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0]  # [Nm]
+  lower_torque_thresholds_nominal: [50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0]  # [Nm]
+  upper_torque_thresholds_nominal: [50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0]  # [Nm]
+  lower_force_thresholds_acceleration: [20.0, 20.0, 20.0, 25.0, 25.0, 25.0]  # [N, N, N, Nm, Nm, Nm]
+  upper_force_thresholds_acceleration: [50.0, 50.0, 50.0, 50.0, 50.0, 50.0]  # [N, N, N, Nm, Nm, Nm]
+  lower_force_thresholds_nominal: [50.0, 50.0, 50.0, 50.0, 50.0, 50.0]  # [N, N, N, Nm, Nm, Nm]
+  upper_force_thresholds_nominal: [50.0, 50.0, 50.0, 50.0, 50.0, 50.0]  # [N, N, N, Nm, Nm, Nm]
+
