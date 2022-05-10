@@ -16,6 +16,7 @@ To run the controller:
 To run the demo of teaching the robot where and how to place a paper cup:
 - Open a new terminal in src/franka_human_friendly_controllers/python
 - Run the main file: python3 main.py
+
 The robot will move to make the gripper face down, and then switch to gravity compensation.
 The robot kan now be moved to the desired initial end-effector position.
 Upon pressing enter, the model is further initialized and the Episodes can be started and quit via the keyboard.
