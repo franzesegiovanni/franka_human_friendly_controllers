@@ -35,7 +35,7 @@ collision_config:
   
   upper_torque_thresholds_nominal: [50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0]  # [Nm]
   
-  lower_force_thresholds_acceleration: [20.0, 20.0, 20.0, 25.0, 25.0, 25.0]  # [N, N, N, Nm, Nm, Nm]
+  lower_force_thresholds_acceleration: [50.0, 50.0, 50.0, 50.0, 50.0, 50.0]  # [N, N, N, Nm, Nm, Nm]
   
   upper_force_thresholds_acceleration: [50.0, 50.0, 50.0, 50.0, 50.0, 50.0]  # [N, N, N, Nm, Nm, Nm] 
   
