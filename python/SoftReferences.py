@@ -71,9 +71,6 @@ class PiecewiseLinearReference(SoftReference):
     self.xRef = x0
     self.qRef = q0
 
-  def getRobotGoal(self):
-    return self.xGoal, self.qGoal
-
   def getDiff2Goal(self, xyzRobot, qRobot):
     return np.linalg.norm(xyzRobot-self.xGoal), Q.rotation_intrinsic_distance(qRobot,self.qGoal)
 

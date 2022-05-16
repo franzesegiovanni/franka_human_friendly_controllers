@@ -68,9 +68,6 @@ class VariableImpedanceController:
       diffX, diffQ = trajectory.getDiff2Goal(self.curr_pos, self.curr_ori)
       return diffX < xMargin*relPrecision and diffQ < qMargin*relPrecision
 
-    posR0 = self.curr_pos; oriR0 = self.curr_ori
-    posRg, oriRg = trajectory.getRobotGoal()
-
     # control loop
     control_frequency = 30
     dt = 1/control_frequency
