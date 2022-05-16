@@ -58,8 +58,10 @@ class VariableImpedanceController:
     angErr = np.pi/4      # angular error recognized as gR =/ gH [rad]
     fErr = 5.             # intraction force recognized as gR =/ gH [N]
     tErr = 2.5            # intraction torque recognized as gR =/ gH [N]
-    K_lin_max=600
-    K_ang_max=15
+    K_lin_max=600         # maximum linear stifness [N/m]
+    K_lin_min=0           # minimum linear stifness [N/m]
+    K_ang_max=15          # maximum angular stifness [Nm/rad]
+    K_ang_min=0           # minimum angular stifness [Nm/rad]
     T_reduce_stiff = 1.   # time of human resistance to drop stiffness [s]
 
     trajectory.initialize(self.curr_pos, self.curr_ori)
@@ -75,15 +77,44 @@ class VariableImpedanceController:
 
     maxDeltaK = K_lin_max*dt/T_reduce_stiff
     maxDeltaKappa = K_ang_max*dt/T_reduce_stiff
-    
+
+    def getDeltaK(disagreementMode:str='force'):
+      deltaK = maxDeltaK
+      deltaKappa = maxDeltaKappa
+
+      if 'force' in disagreementMode:
+        normForce = np.linalg.norm(self.force)
+        normTorque = np.linalg.norm(self.torque)
+        if normForce > fErr or normTorque > tErr:
+          if debugLevel >= 1 and normForce > fErr:
+            print('High force detected: {0} N'.format(normForce))
+          if debugLevel >= 1 and normTorque > tErr:
+            print('High torque detected: {0} Nm'.format(normTorque))
+          deltaK = min(-maxDeltaK, deltaK)
+          deltaKappa = min(-maxDeltaKappa, deltaKappa)
+
+      if 'position' in disagreementMode:
+        deltaX = np.linalg.norm(xSetpoint-self.curr_pos)
+        deltaAng = Q.rotation_intrinsic_distance(qSetpoint, self.curr_ori)
+        if deltaX > xErr or deltaAng > angErr:
+          if debugLevel >= 1 and deltaX > xErr:
+            print('Large distance error: {0} m'.format(deltaX))
+          if debugLevel >= 1 and deltaAng > angErr:
+            print('Large angular error: {0} rad'.format(deltaAng))
+          deltaK = min(-maxDeltaK, deltaK)
+          deltaKappa = min(-maxDeltaKappa, deltaKappa)
+
+      return deltaK, deltaKappa
+
     goal = PoseStamped()
     stiff_des = Float32MultiArray()
 
-    interactionStiffness=1.
     noMotionIter = 0
     old_pose = [self.curr_pos, self.curr_ori]
 
     self.activeControl = True
+    stiff_lin = K_lin_max
+    stiff_ang = K_ang_max
     if debugLevel >= 1:
       print("Active control switched on")
 
@@ -91,33 +122,11 @@ class VariableImpedanceController:
       # compute setpoint
       xSetpoint, qSetpoint = trajectory.getSetpoint(dt, self.curr_pos, self.curr_ori)
 
-      if debugLevel >= 1:
-        normForce = np.linalg.norm(self.force)
-        if (normForce) > fErr:
-          print('High force detected: {0} N'.format(normForce))
-
-        normTorque = np.linalg.norm(self.torque)
-        if (normTorque) > tErr:
-          print('High torque detected: {0} Nm'.format(normTorque))
-
-        deltaX = np.linalg.norm(xSetpoint-self.curr_pos)
-        if (deltaX) > xErr:
-          print('Large distance error: {0} m'.format(deltaX))
-
-        deltaAng = Q.rotation_intrinsic_distance(qSetpoint, self.curr_ori)
-        if (deltaAng) > angErr:
-          print('Large angular error: {0} rad'.format(deltaAng))
-
       if varStiff:
-        # check if stiffness needs to be reduced
-        # reduce_stiff = np.linalg.norm(self.force) > fErr or np.linalg.norm(xSetpoint-self.curr_pos) > xErr or np.linalg.norm(self.torque) > tErr or Q.rotation_intrinsic_distance(qSetpoint, self.curr_ori) > angErr
-        if np.linalg.norm(self.force) > fErr or np.linalg.norm(self.torque) > tErr:
-          interactionStiffness = max(interactionStiffness-dt/T_reduce_stiff, 0)
-        elif interactionStiffness > 0:
-          interactionStiffness = min(interactionStiffness+dt/T_reduce_stiff, 1)
+        deltaK_lin, deltaK_ang = getDeltaK()
 
-        stiff_lin = K_lin_max*interactionStiffness
-        stiff_ang = K_ang_max*interactionStiffness
+        stiff_lin = min(max(K_lin_min, stiff_lin+deltaK_lin), K_lin_max)
+        stiff_ang = min(max(K_ang_min, stiff_lin+deltaK_ang), K_ang_max)
       
       # Correct stiffness to avoid sudden increase
       if stiff_lin > self.stiffness[0] + maxDeltaK:
