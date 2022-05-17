@@ -30,10 +30,10 @@ class VariableImpedanceController:
   stiffness = np.array([400, 400, 400, 30, 30, 30, 0])
 
   # For disagreement detection
-  forceThreshold = 5.       # intraction force recognized as gR =/ gH [N]
-  torqueThreshold = 2.5     # intraction torque recognized as gR =/ gH [Nm]
-  posThreshold = 0.05       # trajectory error recognized as gR =/ gH [m]
-  angThreshold = np.pi/8    # angular error recognized as gR =/ gH [rad]
+  forceThreshold = 3.*np.ones(3)      # intraction force recognized as gR =/ gH [N]
+  torqueThreshold = 1.5*np.ones(3)    # intraction torque recognized as gR =/ gH [Nm]
+  posThreshold = 0.05                 # trajectory error recognized as gR =/ gH [m]
+  angThreshold = np.pi/8              # angular error recognized as gR =/ gH [rad]
 
 
   def ee_pos_callback(self, data): 
@@ -83,12 +83,14 @@ class VariableImpedanceController:
       deltaK_ang = self.DK_ANG_MAX
 
       if 'force' in disagreementMode:
+        forceThreshold = np.linalg.norm(self.forceThreshold)
+        torqueThreshold = np.linalg.norm(self.torqeThreshold)
         normForce = np.linalg.norm(self.force)
         normTorque = np.linalg.norm(self.torque)
-        if normForce > self.forceThreshold or normTorque > self.torqueThreshold:
-          if debugLevel >= 1 and normForce > self.forceThreshold:
+        if normForce > forceThreshold or normTorque > torqueThreshold:
+          if debugLevel >= 1 and normForce > forceThreshold:
             print('High force detected: {0} N'.format(normForce))
-          if debugLevel >= 1 and normTorque > self.torqueThreshold:
+          if debugLevel >= 1 and normTorque > torqueThreshold:
             print('High torque detected: {0} Nm'.format(normTorque))
           deltaK_lin = min(-self.DK_LIN_MAX, deltaK_lin)
           deltaK_ang = min(-self.DK_ANG_MAX, deltaK_ang)
@@ -103,6 +105,22 @@ class VariableImpedanceController:
             print('Large angular error: {0} rad'.format(deltaAng))
           deltaK_lin = min(-self.DK_LIN_MAX, deltaK_lin)
           deltaK_ang = min(-self.DK_ANG_MAX, deltaK_ang)
+
+      if 'energy' in disagreementMode:
+        if self.eeDOF > 3:
+          print('Warning: energy-based disagreement detection responding to force only')
+
+        forceThreshold = 2*self.forceThreshold*np.ones(3)   # using a higher force threshold(!) w.r.t. force disagreement
+        K_inv = np.diag([1/s if s > 0 else 0 for s in self.stiffness[:3]])
+        energyThreshold = np.dot(forceThreshold, np.dot(K_inv, forceThreshold))
+        force = self.force
+        energy = np.dot(force, np.dot(K_inv, force))
+        relEnergy = (energy-energyThreshold)/energyThreshold if energyThreshold > 0 else 0
+        if np.linalg.norm(self.force) > np.linalg.norm(forceThreshold):
+          if debugLevel >= 1:
+            print('Energy level {:.2f} times above threshold; force = {:.2f} N (K={:.0f})'.format(relEnergy, np.linalg.norm(self.force), self.stiffness[0]))
+          deltaK_lin = -relEnergy*self.DK_LIN_MAX
+          deltaK_ang = -relEnergy*self.DK_ANG_MAX
 
       return deltaK_lin, deltaK_ang
 
