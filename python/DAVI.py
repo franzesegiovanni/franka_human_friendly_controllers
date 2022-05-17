@@ -10,10 +10,30 @@ from sensor_msgs.msg import JointState
 from SoftReferences import PiecewiseLinearReference
 
 class VariableImpedanceController:
-  NMA = 50
+  POS_MARGIN = 1e-3         # acceptable goal error [m]
+  QUAT_MARGIN = np.pi/180   # acceptable goal error [rad]
+  K_LIN_FIX = 1000          # linear stiffness if DoF is fixed [N/m]
+  K_LIN_MAX = 600           # maximum linear stiffness [N/m]
+  K_ANG_FIX = 25            # angular stiffness if DoF is fixed [Nm/rad]
+  K_ANG_MAX = 15            # maximum angular stiffness [Nm/rad]
+
+  CONTROL_FREQ = 30         # impedance control frequency [Hz]
+  DT = 1/CONTROL_FREQ       # impedance control time step [s]
+  DT_TRANSITION = 1.        # time of human resistance to reduce stiffness [s]
+  DK_LIN_MAX = K_LIN_MAX*DT/DT_TRANSITION
+  DK_ANG_MAX = K_ANG_MAX*DT/DT_TRANSITION
+
+  NMA = 50                  # size of force/torque moving average filter
+
   last_forces_ = np.zeros((NMA,3))
   last_torques_ = np.zeros((NMA,3))
   stiffness = np.array([400, 400, 400, 30, 30, 30, 0])
+
+  # For disagreement detection
+  forceThreshold = 5.       # intraction force recognized as gR =/ gH [N]
+  torqueThreshold = 2.5     # intraction torque recognized as gR =/ gH [Nm]
+  posThreshold = 0.05       # trajectory error recognized as gR =/ gH [m]
+  angThreshold = np.pi/8    # angular error recognized as gR =/ gH [rad]
 
 
   def ee_pos_callback(self, data): 
@@ -52,59 +72,42 @@ class VariableImpedanceController:
     self.forceAtHuman = transform
 
   def reach_goal(self, trajectory:PiecewiseLinearReference, varStiff:bool=True, debugLevel:int=1):
-    xMargin = 1e-3        # acceptable goal error [m]
-    qMargin = np.pi/180   # acceptable goal error [rad]
-    xErr = 0.05           # trajectory error recognized as gR =/ gH [m]
-    angErr = np.pi/4      # angular error recognized as gR =/ gH [rad]
-    fErr = 5.             # intraction force recognized as gR =/ gH [N]
-    tErr = 2.5            # intraction torque recognized as gR =/ gH [N]
-    K_lin_max=600         # maximum linear stifness [N/m]
-    K_lin_min=0           # minimum linear stifness [N/m]
-    K_ang_max=15          # maximum angular stifness [Nm/rad]
-    K_ang_min=0           # minimum angular stifness [Nm/rad]
-    T_reduce_stiff = 1.   # time of human resistance to drop stiffness [s]
-
     trajectory.initialize(self.curr_pos, self.curr_ori)
 
     def isAtGoal(relPrecision:float=1.):
       diffX, diffQ = trajectory.getDiff2Goal(self.curr_pos, self.curr_ori)
-      return diffX < xMargin*relPrecision and diffQ < qMargin*relPrecision
-
-    # control loop
-    control_frequency = 30
-    dt = 1/control_frequency
-    r = rospy.Rate(control_frequency)
-
-    maxDeltaK = K_lin_max*dt/T_reduce_stiff
-    maxDeltaKappa = K_ang_max*dt/T_reduce_stiff
+      return diffX < self.POS_MARGIN*relPrecision and diffQ < self.QUAT_MARGIN*relPrecision
 
     def getDeltaK(disagreementMode:str='force'):
-      deltaK = maxDeltaK
-      deltaKappa = maxDeltaKappa
+      deltaK_lin = self.DK_LIN_MAX
+      deltaK_ang = self.DK_ANG_MAX
 
       if 'force' in disagreementMode:
         normForce = np.linalg.norm(self.force)
         normTorque = np.linalg.norm(self.torque)
-        if normForce > fErr or normTorque > tErr:
-          if debugLevel >= 1 and normForce > fErr:
+        if normForce > self.forceThreshold or normTorque > self.torqueThreshold:
+          if debugLevel >= 1 and normForce > self.forceThreshold:
             print('High force detected: {0} N'.format(normForce))
-          if debugLevel >= 1 and normTorque > tErr:
+          if debugLevel >= 1 and normTorque > self.torqueThreshold:
             print('High torque detected: {0} Nm'.format(normTorque))
-          deltaK = min(-maxDeltaK, deltaK)
-          deltaKappa = min(-maxDeltaKappa, deltaKappa)
+          deltaK_lin = min(-self.DK_LIN_MAX, deltaK_lin)
+          deltaK_ang = min(-self.DK_ANG_MAX, deltaK_ang)
 
       if 'position' in disagreementMode:
         deltaX = np.linalg.norm(xSetpoint-self.curr_pos)
         deltaAng = Q.rotation_intrinsic_distance(qSetpoint, self.curr_ori)
-        if deltaX > xErr or deltaAng > angErr:
-          if debugLevel >= 1 and deltaX > xErr:
+        if deltaX > self.posThreshold or deltaAng > self.angThreshold:
+          if debugLevel >= 1 and deltaX > self.posThreshold:
             print('Large distance error: {0} m'.format(deltaX))
-          if debugLevel >= 1 and deltaAng > angErr:
+          if debugLevel >= 1 and deltaAng > self.angThreshold:
             print('Large angular error: {0} rad'.format(deltaAng))
-          deltaK = min(-maxDeltaK, deltaK)
-          deltaKappa = min(-maxDeltaKappa, deltaKappa)
+          deltaK_lin = min(-self.DK_LIN_MAX, deltaK_lin)
+          deltaK_ang = min(-self.DK_ANG_MAX, deltaK_ang)
 
-      return deltaK, deltaKappa
+      return deltaK_lin, deltaK_ang
+
+    # control loop
+    r = rospy.Rate(self.CONTROL_FREQ)
 
     goal = PoseStamped()
     stiff_des = Float32MultiArray()
@@ -113,26 +116,26 @@ class VariableImpedanceController:
     old_pose = [self.curr_pos, self.curr_ori]
 
     self.activeControl = True
-    stiff_lin = K_lin_max
-    stiff_ang = K_ang_max
+    stiff_lin = self.K_LIN_MAX
+    stiff_ang = self.K_ANG_MAX
     if debugLevel >= 1:
       print("Active control switched on")
 
     while not isAtGoal():
       # compute setpoint
-      xSetpoint, qSetpoint = trajectory.getSetpoint(dt, self.curr_pos, self.curr_ori)
+      xSetpoint, qSetpoint = trajectory.getSetpoint(self.DT, self.curr_pos, self.curr_ori)
 
       if varStiff:
         deltaK_lin, deltaK_ang = getDeltaK()
 
-        stiff_lin = min(max(K_lin_min, stiff_lin+deltaK_lin), K_lin_max)
-        stiff_ang = min(max(K_ang_min, stiff_lin+deltaK_ang), K_ang_max)
+        stiff_lin = min(max(0., stiff_lin+deltaK_lin), self.K_LIN_MAX)
+        stiff_ang = min(max(0., stiff_lin+deltaK_ang), self.K_ANG_MAX)
       
       # Correct stiffness to avoid sudden increase
-      if stiff_lin > self.stiffness[0] + maxDeltaK:
-        stiff_lin = self.stiffness[0] + maxDeltaK
-      if stiff_ang > self.stiffness[5] + maxDeltaKappa:
-        stiff_ang = self.stiffness[5] + maxDeltaKappa
+      if stiff_lin > self.stiffness[0] + self.DK_LIN_MAX:
+        stiff_lin = self.stiffness[0] + self.DK_LIN_MAX
+      if stiff_ang > self.stiffness[5] + self.DK_ANG_MAX:
+        stiff_ang = self.stiffness[5] + self.DK_ANG_MAX
 
       # send goal position, angle
       goal.pose.position.x = xSetpoint[0]
@@ -151,7 +154,7 @@ class VariableImpedanceController:
 
       if self.eeDOF < 4:
         stiff_ang = 25.
-      self.stiffness = np.array([stiff_lin, stiff_lin, stiff_lin, 25., 25., stiff_ang, 0.])
+      self.stiffness = np.array([stiff_lin, stiff_lin, stiff_lin, self.K_ANG_FIX, self.K_ANG_FIX, stiff_ang, 0.])
       stiff_des.data = self.stiffness.astype(np.float32)
       if debugLevel >= 2:
         print("Stiffness:")
@@ -170,9 +173,9 @@ class VariableImpedanceController:
         return 1
 
       # exit when standing still
-      if np.linalg.norm(self.curr_pos - old_pose[0]) < xMargin and Q.rotation_intrinsic_distance(self.curr_ori, old_pose[1]) < qMargin:
+      if np.linalg.norm(self.curr_pos - old_pose[0]) < self.POS_MARGIN and Q.rotation_intrinsic_distance(self.curr_ori, old_pose[1]) < self.QUAT_MARGIN:
         noMotionIter += 1
-        if noMotionIter > 0.5/dt: # 0.5 sec
+        if noMotionIter > 0.5/self.DT: # 0.5 sec
           return 0 if isAtGoal(10) else 2
       else:
         noMotionIter = 0
@@ -185,7 +188,7 @@ class VariableImpedanceController:
     if debugLevel >= 1:
       print("Active control switched off in passive mode")
 
-    self.stiffness = np.array([0.0, 0.0, 0.0, 25.0, 25.0, 25.0 if self.eeDOF<4 else 0.0, 0.0])
+    self.stiffness = np.array([0., 0., 0., self.K_ANG_FIX, self.K_ANG_FIX, self.K_ANG_FIX if self.eeDOF<4 else 0., 0.])
     stiff_des = Float32MultiArray()
     stiff_des.data = self.stiffness.astype(np.float32)
     if debugLevel >= 1:
