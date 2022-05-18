@@ -12,7 +12,7 @@ To run the controller:
 - Open a terminal, in every terminal: source devel/setup.bash
 - roslaunch franka_human_friendly_controllers cartesian_variable_impedance_controller.launch robot_ip:=ROBOT_IP load_gripper:=True
 - In a different terminal (don't forget to source again): rosrun franka_human_friendly_controllers franka_gripper_online
-
+# Disagreement-aware Variable Impedance controller (DAVI)
 To run the demo of teaching the robot where and how to place a paper cup:
 - Open a new terminal in src/franka_human_friendly_controllers/python
 - Run the main file: python3 main.py
