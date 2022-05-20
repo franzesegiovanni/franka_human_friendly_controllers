@@ -20,7 +20,6 @@ find_package(catkin REQUIRED COMPONENTS
   realtime_tools
   roscpp
   rospy
-  trac_ik_lib
 )
 
 find_package(Eigen3 REQUIRED)
