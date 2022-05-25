@@ -163,9 +163,7 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   Eigen::Map<Eigen::Matrix<double, 7, 1> > q(robot_state.q.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > dq(robot_state.dq.data());
   double time_=ros::Time::now().toSec();
-  //ddq=ddq+(dq-dq_old)/(time_-time_old);
-  //dq_old=dq;
-  //time_old=time_;
+
   Eigen::Map<Eigen::Matrix<double, 7, 1> > tau_J_d(  // NOLINT (readability-identifier-naming)
       robot_state.tau_J_d.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > tau_ext(robot_state.tau_ext_hat_filtered.data());
@@ -177,6 +175,7 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   Eigen::MatrixXd jacobian_transpose_pinv;
   Eigen::MatrixXd Null_mat;
   pseudoInverse(jacobian.transpose(), jacobian_transpose_pinv);
+  // Compute the value of the friction
   tau_f(0) =  FI_11/(1+exp(-FI_21*(dq(0)+FI_31))) - TAU_F_CONST_1;
   tau_f(1) =  FI_12/(1+exp(-FI_22*(dq(1)+FI_32))) - TAU_F_CONST_2;
   tau_f(2) =  FI_13/(1+exp(-FI_23*(dq(2)+FI_33))) - TAU_F_CONST_3;
@@ -185,11 +184,13 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   tau_f(5) =  FI_16/(1+exp(-FI_26*(dq(5)+FI_36))) - TAU_F_CONST_6;
   tau_f(6) =  FI_17/(1+exp(-FI_27*(dq(6)+FI_37))) - TAU_F_CONST_7;
 
-  force_torque=force_torque-jacobian_transpose_pinv*(tau_ext-tau_f);
 
+//Sliding window filter
+ /*
+  force_torque=force_torque-jacobian_transpose_pinv*(tau_ext-tau_f);
   // publish force, torque
   filter_step=filter_step+1;
-  filter_step_=10;
+  filter_step_=10; // this will make the force to be published at 1000/filter_step_ frequency
   alpha=1;
   if (filter_step==filter_step_){
     geometry_msgs::WrenchStamped force_torque_msg;
@@ -200,12 +201,24 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
     force_torque_msg.wrench.torque.y=force_torque_old[4]*(1-alpha)+force_torque[4]*alpha/(filter_step_);
     force_torque_msg.wrench.torque.z=force_torque_old[5]*(1-alpha)+force_torque[5]*alpha/(filter_step_);
     pub_force_torque_.publish(force_torque_msg);
-    force_torque_old=force_torque/(filter_step_);
+    force_torque_old=force_torque/(filter_step_); //save the previous average 
     force_torque.setZero();
     //ddq.setZero();
     filter_step=0;
     }
-
+    */
+   //Low pass filter for the external force estimation
+  float iCutOffFrequency=10.0;
+  force_torque+=(-jacobian_transpose_pinv*(tau_ext-tau_f)-force_torque)*(1-exp(-0.001 * 2.0 * M_PI * iCutOffFrequency));
+  geometry_msgs::WrenchStamped force_torque_msg;
+  force_torque_msg.wrench.force.x=force_torque[0];
+  force_torque_msg.wrench.force.y=force_torque[1];
+  force_torque_msg.wrench.force.z=force_torque[2];
+  force_torque_msg.wrench.torque.x=force_torque[3];
+  force_torque_msg.wrench.torque.y=force_torque[4];
+  force_torque_msg.wrench.torque.z=force_torque[5];
+  pub_force_torque_.publish(force_torque_msg);
+  
   geometry_msgs::PoseStamped pose_msg;
   pose_msg.pose.position.x=position[0];
   pose_msg.pose.position.y=position[1];
