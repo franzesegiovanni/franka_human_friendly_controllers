@@ -21,7 +21,7 @@ The robot will move to make the gripper face down, and then switch to gravity co
 The robot can now be moved to the desired initial end-effector position.
 Upon pressing enter, the model is further initialized and the Episodes can be started and quit via the keyboard.
 
-Watch our demo here: https://youtu.be/A9cvBl_3fYc
+Watch our demo here: https://youtu.be/toIUuFguFgM
 
 If the robot stops during interaction because of reflex, go to change this parameters:
 in /src/franka_ros/franka_control/config/franka_control_node.yaml
