@@ -4,4 +4,10 @@
       A controller that renders a spring damper system in cartesian space.
     </description>
   </class>
+  </class>
+  <class name="franka_human_friendly_controllers/JointVariableImpedanceController" type="franka_human_friendly_controllers::JointVariableImpedanceController" base_class_type="controller_interface::ControllerBase">
+    <description>
+    A controller that renders a spring damper system in joint space.
+    </description>
+  </class>
 </library>

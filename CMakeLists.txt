@@ -34,6 +34,7 @@ generate_messages()
 generate_dynamic_reconfigure_options(
   cfg/compliance_param.cfg
   cfg/desired_mass_param.cfg
+  cfg/compliance_joint_param.cfg
 )
 
 catkin_package(
@@ -58,6 +59,7 @@ catkin_package(
 
 add_library(franka_human_friendly_controllers
   src/cartesian_variable_impedance_controller.cpp
+  src/joint_variable_impedance_controller.cpp
 )
 
 add_dependencies(franka_human_friendly_controllers
