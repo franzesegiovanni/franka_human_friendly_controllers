@@ -27,7 +27,8 @@ in franka_gazebo/package.xml  **add**  ```<depend>franka_human_friendly_controll
 
 in franka_gazebo/config/sim_controllers.yaml **add**
 
-```cartesian_variable_impedance_controller:
+``` 
+ cartesian_variable_impedance_controller:
   type: franka_human_friendly_controllers/CartesianVariableImpedanceController 
   arm_id: $(arg arm_id)
   joint_names:
