@@ -38,23 +38,30 @@ int main(int argc, char **argv)
   franka_gripper::MoveActionGoal msg_move;
   franka_gripper::GraspActionGoal msg_grasp;
   msg_move.goal.speed = 1;
-  msg_grasp.goal.speed = 1;
-
+  msg_grasp.goal.speed = 0.1;
+  msg_grasp.goal.epsilon.inner=0.05;
+  msg_grasp.goal.epsilon.outer=0.05;
+  msg_grasp.goal.force=5;
   //franka_gripper::StopActionGoal msg_stop;
   while (ros::ok())
   {
    if(flag==1)
    {
-     if(width<=(width_old+tolerance)) {
-     msg_move.goal.width = width;
-     pub_move.publish(msg_move);}
-     else {
-       msg_move.goal.width = width;
-       pub_move.publish(msg_move);
-       msg_grasp.goal.width = width;
-       pub_grasp.publish(msg_grasp);}
-     width_old=width;
-     flag = 0;
+    //  if(width<=(width_old+tolerance)) {
+    // msg_move.goal.width = width;
+    // pub_move.publish(msg_move);
+
+    //  }
+    //  else {
+    //    msg_move.goal.width = width;
+    //    pub_move.publish(msg_move);
+    //    msg_grasp.goal.width = width;
+    //    pub_grasp.publish(msg_grasp);}
+
+     //width_old=width;
+    msg_grasp.goal.width = width;
+    pub_grasp.publish(msg_grasp); 
+    flag = 0;
     }
 
     ros::spinOnce();
