@@ -67,6 +67,8 @@ class CartesianVariableImpedanceController : public controller_interface::MultiI
   Eigen::Vector3d position_d_;
   Eigen::Quaterniond orientation_d_;
 
+  Eigen::Vector3d position_elbow_d_;
+
   double count_vibration{10000.0};
   double duration_vibration;
   bool vibrate= false;
@@ -81,10 +83,9 @@ class CartesianVariableImpedanceController : public controller_interface::MultiI
   ros::Subscriber sub_equilibrium_pose_;
   void equilibriumPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg);
 
-  // Configuration pose subscriber
-  ros::Subscriber sub_equilibrium_config_;
-  void equilibriumConfigurationCallback( const std_msgs::Float32MultiArray::ConstPtr& joint);
 
+  ros::Subscriber sub_equilibrium_pose_elbow_;
+  void equilibriumPoseElbowCallback(const geometry_msgs::PoseStampedConstPtr& msg) ;
 
   // Multi directional stiffness stiffnes
   ros::Subscriber sub_stiffness_;
@@ -96,6 +97,7 @@ class CartesianVariableImpedanceController : public controller_interface::MultiI
   ros::Publisher pub_stiff_update_;
 
   ros::Publisher pub_cartesian_pose_;
+  ros::Publisher pub_cartesian_pose_elbow;
   ros::Publisher pub_force_torque_;
 
 

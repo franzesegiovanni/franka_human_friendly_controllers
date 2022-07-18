@@ -20,10 +20,15 @@ bool CartesianVariableImpedanceController::init(hardware_interface::RobotHW* rob
   sub_equilibrium_pose_ = node_handle.subscribe(
       "/equilibrium_pose", 20, &CartesianVariableImpedanceController::equilibriumPoseCallback, this,
       ros::TransportHints().reliable().tcpNoDelay());
-  sub_equilibrium_config_ = node_handle.subscribe(
-      "/equilibrium_configuration", 20, &CartesianVariableImpedanceController::equilibriumConfigurationCallback, this,
-      ros::TransportHints().reliable().tcpNoDelay());
+  // sub_equilibrium_config_ = node_handle.subscribe(
+  //     "/equilibrium_configuration", 20, &CartesianVariableImpedanceController::equilibriumConfigurationCallback, this,
+  //     ros::TransportHints().reliable().tcpNoDelay());
   // We want to add the subscriber to the note for reading the desired stiffness in the different directions
+
+  sub_equilibrium_pose_elbow_ = node_handle.subscribe(
+      "/equilibrium_pose_elbow", 20, &CartesianVariableImpedanceController::equilibriumPoseElbowCallback, this,
+      ros::TransportHints().reliable().tcpNoDelay());
+
   sub_stiffness_ = node_handle.subscribe(
     "/stiffness", 20, &CartesianVariableImpedanceController::equilibriumStiffnessCallback, this,
     ros::TransportHints().reliable().tcpNoDelay());
@@ -36,6 +41,8 @@ bool CartesianVariableImpedanceController::init(hardware_interface::RobotHW* rob
 
   pub_cartesian_pose_= node_handle.advertise<geometry_msgs::PoseStamped>("/cartesian_pose",1);
 
+ pub_cartesian_pose_elbow= node_handle.advertise<geometry_msgs::PoseStamped>("/cartesian_pose_elbow",1);
+ 
   pub_force_torque_= node_handle.advertise<geometry_msgs::WrenchStamped>("/force_torque_ext",1);
 
   std::string arm_id;
@@ -130,18 +137,27 @@ void CartesianVariableImpedanceController::starting(const ros::Time& /*time*/) {
   // get jacobian
   std::array<double, 42> jacobian_array =
       model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+
+  std::array<double, 16> pose = model_handle_->getPose(franka::Frame::kJoint4);
+
+  std::array<double, 42> jacobian_elbow_array =
+      model_handle_->getZeroJacobian(franka::Frame::kJoint4);
   // convert to eigen
   Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian(jacobian_array.data());
+  Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian_elbow(jacobian_elbow_array.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > dq_initial(initial_state.dq.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > q_initial(initial_state.q.data());
   Eigen::Affine3d initial_transform(Eigen::Matrix4d::Map(initial_state.O_T_EE.data()));
+  Eigen::Affine3d initial_transform_elbow(Eigen::Matrix4d::Map(pose.data()));
   // set equilibrium point to current state
   position_d_ = initial_transform.translation(); // this allows the robot to start on the starting configuration
   orientation_d_ = Eigen::Quaterniond(initial_transform.linear()); // this allows the robot to start on the starting configuration
+
+  position_elbow_d_= initial_transform_elbow.translation();
   //position_d_target_ = initial_transform.translation();
   //orientation_d_target_ = Eigen::Quaterniond(initial_transform.linear());
   // set nullspace equilibrium configuration to initial q
-  q_d_nullspace_ = q_initial;
+  //q_d_nullspace_ = q_initial;
   force_torque_old.setZero();
   double time_old=ros::Time::now().toSec();
   count_vibration=1000;
@@ -156,10 +172,12 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   Eigen::Map<Eigen::Matrix<double, 7, 7> > mass(mass_array.data());
   std::array<double, 42> jacobian_array =
       model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
-
+  std::array<double, 42> jacobian_elbow_array =
+      model_handle_->getZeroJacobian(franka::Frame::kJoint4);
   // convert to Eigen
   Eigen::Map<Eigen::Matrix<double, 7, 1> > coriolis(coriolis_array.data());
   Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian(jacobian_array.data());
+    Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian_elbow(jacobian_elbow_array.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > q(robot_state.q.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > dq(robot_state.dq.data());
   double time_=ros::Time::now().toSec();
@@ -171,6 +189,12 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
   Eigen::Vector3d position(transform.translation());
   Eigen::Quaterniond orientation(transform.linear());
+
+  std::array<double, 16> pose = model_handle_->getPose(franka::Frame::kJoint4);
+  Eigen::Affine3d transform_elbow(Eigen::Matrix4d::Map(pose.data()));
+  Eigen::Vector3d position_elbow(transform_elbow.translation());
+  Eigen::Quaterniond orientation_elbow(transform_elbow.linear());
+
   Eigen::Matrix<double, 7, 1>  tau_f;
   Eigen::MatrixXd jacobian_transpose_pinv;
   Eigen::MatrixXd Null_mat;
@@ -228,10 +252,23 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   pose_msg.pose.orientation.z=orientation.z();
   pose_msg.pose.orientation.w=orientation.w();
   pub_cartesian_pose_.publish(pose_msg);
+
+  geometry_msgs::PoseStamped elbow_msg;
+  elbow_msg.pose.position.x=position_elbow[0];
+  elbow_msg.pose.position.y=position_elbow[1];
+  elbow_msg.pose.position.z=position_elbow[2];
+  elbow_msg.pose.orientation.x=orientation_elbow.x();
+  elbow_msg.pose.orientation.y=orientation_elbow.y();
+  elbow_msg.pose.orientation.z=orientation_elbow.z();
+  elbow_msg.pose.orientation.w=orientation_elbow.w();
+  pub_cartesian_pose_elbow.publish(elbow_msg);
   // compute error to desired pose
   // position error
   Eigen::Matrix<double, 6, 1> error;
   error.head(3) << position - position_d_;
+
+  Eigen::Matrix<double, 6, 1> error_elbow;
+  error_elbow.head(3) << position_elbow - position_elbow_d_;
 
   // orientation error
   if (orientation_d_.coeffs().dot(orientation.coeffs()) < 0.0) {
@@ -266,8 +303,8 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   // nullspace PD control with damping ratio = 1
   tau_nullspace << (Eigen::MatrixXd::Identity(7, 7) -
                     jacobian.transpose() * jacobian_transpose_pinv) *
-                       (nullspace_stiffness_ * null_vect -
-                        1*(2.0 * sqrt(nullspace_stiffness_)) * dq); //double critic damping
+                       (jacobian_elbow.transpose() *
+                  (-cartesian_stiffness_ * error_elbow -  cartesian_damping_ * (jacobian_elbow * dq)) ); //double critic damping
   tau_joint_limit.setZero();
   if (q(0)>2.85)     { tau_joint_limit(0)=-10; }
   if (q(0)<-2.85)    { tau_joint_limit(0)=+10; }
@@ -429,15 +466,13 @@ void CartesianVariableImpedanceController::equilibriumPoseCallback(
     orientation_d_.coeffs() << -orientation_d_.coeffs();
 }
 }
-void CartesianVariableImpedanceController::equilibriumConfigurationCallback( const std_msgs::Float32MultiArray::ConstPtr& joint) {
-  int i = 0;
-  for(std::vector<float>::const_iterator it = joint->data.begin(); it != joint->data.end(); ++it)
-  {
-    q_d_nullspace_[i] = *it;
-    i++;
-  }
-  return;
+
+
+void CartesianVariableImpedanceController::equilibriumPoseElbowCallback(
+    const geometry_msgs::PoseStampedConstPtr& msg) {
+  position_elbow_d_ << msg->pose.position.x, msg->pose.position.y, msg->pose.position.z;
 }
+
 void CartesianVariableImpedanceController::equilibriumVibrationCallback( const std_msgs::Float32::ConstPtr& vibration_msg) {
   count_vibration = 0;
   duration_vibration = vibration_msg->data;
