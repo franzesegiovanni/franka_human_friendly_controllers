@@ -1,14 +1,45 @@
 # Franka Human Friendly Controllers
-To install:
-- Create a workspace containing a src directory.
-- Inside the src directory, clone the franka_ros repository by frankaemika.
-- Inside the repository, clone this repository.
-- Return to the workspace main directory (cd ../..).
-- Source your version of ROS (e.g. ```source /opt/ros/melodic/setup.bash```).
-- Build the project, calling: 
- ```
- catkin_make -DMAKE_BUILD_TYPE=Release -DFranka_DIR:PATH=/path/to/libfranka/build 
- ```
+For more info: https://frankaemika.github.io/docs/installation_linux.html
+- Open a terminal pressing ctrl+alt+t
+
+-In case you already have some versions of libfranka installed, remove them to avoid conflicts with:
+```
+sudo apt remove "*libfranka*"
+sudo apt autoremove
+```
+Type the following commands to generate and build libfranka
+```
+cd
+sudo apt install build-essential cmake git libpoco-dev libeigen3-dev
+git clone --recursive https://github.com/frankaemika/libfranka
+cd libfranka
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build .
+```
+
+This last comand may take several minutes. 
+
+Now create a workspace (here called catkin_ws) and install franka_ros in it
+```
+cd
+mkdir -p catkin_ws/src
+cd catkin_ws
+source /opt/ros/<ros-distro>/setup.sh
+catkin_init_workspace src
+git clone --recursive https://github.com/frankaemika/franka_ros src/franka_ros
+rosdep install --from-paths src --ignore-src --rosdistro <ros-distro> -y --skip-keys libfranka
+source devel/setup.sh
+```
+- Finally, install the controllers inside the folder "franka_ros" and build the code:
+```
+cd src/franka_ros
+git clone https://github.com/franzesegiovanni/franka_human_friendly_controllers.git
+cd ../..
+source /opt/ros/<ros-distro>/setup.bash
+catkin_make -DMAKE_BUILD_TYPE=Release -DFranka_DIR:PATH=~/libfranka/build
+```
 
 To run the controller:
 - Switch on your Panda robot (make sure the gripper is initialized correctly), unlock its joints (and activate the FCI if necessary).
