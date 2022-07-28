@@ -152,7 +152,7 @@ void CartesianVariableImpedanceController::starting(const ros::Time& /*time*/) {
   // set equilibrium point to current state
   position_d_ = initial_transform.translation(); // this allows the robot to start on the starting configuration
   orientation_d_ = Eigen::Quaterniond(initial_transform.linear()); // this allows the robot to start on the starting configuration
-
+  position_elbow_d_.setZero();
   position_elbow_d_= initial_transform_elbow.translation();
   //position_d_target_ = initial_transform.translation();
   //orientation_d_target_ = Eigen::Quaterniond(initial_transform.linear());
@@ -268,8 +268,13 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   error.head(3) << position - position_d_;
 
   Eigen::Matrix<double, 6, 1> error_elbow;
+  error_elbow.setZero();
   error_elbow.head(3) << position_elbow - position_elbow_d_;
+  
 
+  error_elbow[0]=std::max(-0.02, std::min(error_elbow[0], 0.02));
+  error_elbow[1]=std::max(-0.02, std::min(error_elbow[1], 0.02));
+  error_elbow[2]=std::max(-0.02, std::min(error_elbow[2], 0.02));
   // orientation error
   if (orientation_d_.coeffs().dot(orientation.coeffs()) < 0.0) {
     orientation.coeffs() << -orientation.coeffs();
@@ -298,6 +303,10 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   null_vect(5)=(q_d_nullspace_(5) - q(5));
   null_vect(6)=(q_d_nullspace_(6) - q(6));
   // Cartesian PD control with damping ratio = 1
+  error[0]=std::max(-0.02, std::min(error[0], 0.02));
+  error[1]=std::max(-0.02, std::min(error[1], 0.02));
+  error[2]=std::max(-0.02, std::min(error[2], 0.02));
+
   tau_task << jacobian.transpose() *
                   (-cartesian_stiffness_ * error -  cartesian_damping_ * (jacobian * dq)); //double critic damping
   // nullspace PD control with damping ratio = 1
