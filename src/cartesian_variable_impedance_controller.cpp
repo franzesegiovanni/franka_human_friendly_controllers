@@ -154,6 +154,7 @@ void CartesianVariableImpedanceController::starting(const ros::Time& /*time*/) {
   orientation_d_ = Eigen::Quaterniond(initial_transform.linear()); // this allows the robot to start on the starting configuration
   position_elbow_d_.setZero();
   position_elbow_d_= initial_transform_elbow.translation();
+  orientation_elbow_d_= Eigen::Quaterniond(initial_transform_elbow.linear());
   //position_d_target_ = initial_transform.translation();
   //orientation_d_target_ = Eigen::Quaterniond(initial_transform.linear());
   // set nullspace equilibrium configuration to initial q
@@ -271,10 +272,23 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   error_elbow.setZero();
   error_elbow.head(3) << position_elbow - position_elbow_d_;
   
+  if (orientation_elbow_d_.coeffs().dot(orientation_elbow.coeffs()) < 0.0) {
+    orientation_elbow.coeffs() << -orientation_elbow.coeffs();
+  }
+  // "difference" quaternion
+  Eigen::Quaterniond error_quaternion_elbow(orientation_elbow * orientation_elbow_d_.inverse());
+  // convert to axis angle
+  Eigen::AngleAxisd error_quaternion_angle_axis_elbow(error_quaternion_elbow);
+  // compute "orientation error"
+  error_elbow.tail(3) << error_quaternion_angle_axis_elbow.axis() * error_quaternion_angle_axis_elbow.angle();
 
-  error_elbow[0]=std::max(-0.02, std::min(error_elbow[0], 0.02));
-  error_elbow[1]=std::max(-0.02, std::min(error_elbow[1], 0.02));
-  error_elbow[2]=std::max(-0.02, std::min(error_elbow[2], 0.02));
+  error_elbow[0]=std::max(-0.04, std::min(error_elbow[0], 0.04));
+  error_elbow[1]=std::max(-0.04, std::min(error_elbow[1], 0.04));
+  error_elbow[2]=std::max(-0.04, std::min(error_elbow[2], 0.04));
+  error_elbow[3]=std::max(-0.04, std::min(error_elbow[3], 0.04));
+  error_elbow[4]=std::max(-0.04, std::min(error_elbow[4], 0.04));
+  error_elbow[5]=std::max(-0.04, std::min(error_elbow[5], 0.04));
+
   // orientation error
   if (orientation_d_.coeffs().dot(orientation.coeffs()) < 0.0) {
     orientation.coeffs() << -orientation.coeffs();
@@ -303,9 +317,9 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   null_vect(5)=(q_d_nullspace_(5) - q(5));
   null_vect(6)=(q_d_nullspace_(6) - q(6));
   // Cartesian PD control with damping ratio = 1
-  error[0]=std::max(-0.02, std::min(error[0], 0.02));
-  error[1]=std::max(-0.02, std::min(error[1], 0.02));
-  error[2]=std::max(-0.02, std::min(error[2], 0.02));
+  error[0]=std::max(-0.04, std::min(error[0], 0.04));
+  error[1]=std::max(-0.04, std::min(error[1], 0.04));
+  error[2]=std::max(-0.04, std::min(error[2], 0.04));
 
   tau_task << jacobian.transpose() *
                   (-cartesian_stiffness_ * error -  cartesian_damping_ * (jacobian * dq)); //double critic damping
@@ -480,6 +494,12 @@ void CartesianVariableImpedanceController::equilibriumPoseCallback(
 void CartesianVariableImpedanceController::equilibriumPoseElbowCallback(
     const geometry_msgs::PoseStampedConstPtr& msg) {
   position_elbow_d_ << msg->pose.position.x, msg->pose.position.y, msg->pose.position.z;
+  Eigen::Quaterniond last_orientation_elbow_d_(orientation_elbow_d_);
+  orientation_elbow_d_.coeffs() << msg->pose.orientation.x, msg->pose.orientation.y,
+      msg->pose.orientation.z, msg->pose.orientation.w;
+  if (last_orientation_elbow_d_.coeffs().dot(orientation_elbow_d_.coeffs()) < 0.0) {
+    orientation_elbow_d_.coeffs() << -orientation_elbow_d_.coeffs();
+  }
 }
 
 void CartesianVariableImpedanceController::equilibriumVibrationCallback( const std_msgs::Float32::ConstPtr& vibration_msg) {

@@ -66,6 +66,7 @@ class CartesianVariableImpedanceController : public controller_interface::MultiI
   Eigen::Matrix<float, 7, 1> stiff_;
   Eigen::Vector3d position_d_;
   Eigen::Quaterniond orientation_d_;
+  Eigen::Quaterniond orientation_elbow_d_;
 
   Eigen::Vector3d position_elbow_d_;
 
