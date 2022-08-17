@@ -115,9 +115,6 @@ class JointVariableImpedanceController : public controller_interface::MultiInter
   hardware_interface::PositionJointInterface *_position_joint_interface;
   std::vector<hardware_interface::JointHandle> _position_joint_handles;
 
-  void calculateDamping(Eigen::Matrix<double, 7, 1>& goal);
-
-
 };
 
 

@@ -23,9 +23,6 @@ bool JointVariableImpedanceController::init(hardware_interface::RobotHW* robot_h
   sub_stiffness_ = node_handle.subscribe(
     "/stiffness", 20, &JointVariableImpedanceController::equilibriumStiffnessCallback, this,
     ros::TransportHints().reliable().tcpNoDelay());
-  // sub_equilibrium_pose_ik = node_handle.subscribe(
-  //       "/equilibrium_pose", 1, &JointVariableImpedanceController::equilibriumConfigurationIKCallback, this,
-  //       ros::TransportHints().reliable().tcpNoDelay());
   sub_equilibrium_config_ = node_handle.subscribe(
       "/equilibrium_configuration", 20, &JointVariableImpedanceController::equilibriumConfigurationCallback, this,
       ros::TransportHints().reliable().tcpNoDelay());
@@ -204,13 +201,7 @@ void JointVariableImpedanceController::update(const ros::Time& /*time*/,
 
 
   error_vect.setZero();
-  // error_vect(0)=std::max(-0.1,std::min((q_d_(0) - q(0)),0.1));
-  // error_vect(1)=std::max(-0.1,std::min((q_d_(1) - q(1)),0.1));
-  // error_vect(2)=std::max(-0.1,std::min((q_d_(2) - q(2)),0.1));
-  // error_vect(3)=std::max(-0.1,std::min((q_d_(3) - q(3)),0.1));
-  // error_vect(4)=std::max(-0.1,std::min((q_d_(4) - q(4)),0.1));
-  // error_vect(5)=std::max(-0.1,std::min((q_d_(5) - q(5)),0.1));
-  // error_vect(6)=std::max(-0.1,std::min((q_d_(6) - q(6)),0.1));
+
   error_vect(0)=(q_d_(0) - q(0));
   error_vect(1)=(q_d_(1) - q(1));
   error_vect(2)=(q_d_(2) - q(2));
@@ -218,6 +209,14 @@ void JointVariableImpedanceController::update(const ros::Time& /*time*/,
   error_vect(4)=(q_d_(4) - q(4));
   error_vect(5)=(q_d_(5) - q(5));
   error_vect(6)=(q_d_(6) - q(6));
+  // uncomment this if you want to have velocity clipping
+  // error_vect(0)=std::max(-0.1,std::min((q_d_(0) - q(0)),0.1));
+  // error_vect(1)=std::max(-0.1,std::min((q_d_(1) - q(1)),0.1));
+  // error_vect(2)=std::max(-0.1,std::min((q_d_(2) - q(2)),0.1));
+  // error_vect(3)=std::max(-0.1,std::min((q_d_(3) - q(3)),0.1));
+  // error_vect(4)=std::max(-0.1,std::min((q_d_(4) - q(4)),0.1));
+  // error_vect(5)=std::max(-0.1,std::min((q_d_(5) - q(5)),0.1));
+  // error_vect(6)=std::max(-0.1,std::min((q_d_(6) - q(6)),0.1));
   tau_joint << joint_stiffness_target_ * (error_vect) -  joint_damping_target_ * (dq); //double critic damping
   tau_joint_limit.setZero();
   if (q(0)>2.85)     { tau_joint_limit(0)=-10; }
@@ -271,9 +270,6 @@ void JointVariableImpedanceController::equilibriumStiffnessCallback(
   }
   }
 
-  ROS_INFO_STREAM("Stiffness matrix is:" << joint_stiffness_target_);
-  calculateDamping(q_d_); //check what damping ratio is actually taking
-  ROS_INFO_STREAM("Damping matrix is:" << joint_damping_target_);
 }
 
 void JointVariableImpedanceController::complianceJointParamCallback(
@@ -293,7 +289,7 @@ void JointVariableImpedanceController::complianceJointParamCallback(
   joint_damping_target_(3,3)=2*damping_ratio*joint_stiffness_target_(3,3) ;
   joint_damping_target_(4,4)=2*damping_ratio*joint_stiffness_target_(4,4) ;
   joint_damping_target_(5,5)=2*damping_ratio*joint_stiffness_target_(5,5) ;
-  joint_damping_target_(5,5)=2*damping_ratio*joint_stiffness_target_(6,6) ;
+  joint_damping_target_(6,6)=2*damping_ratio*joint_stiffness_target_(6,6) ;
   ROS_INFO_STREAM("Stiffness matrix is:" << joint_stiffness_target_);
   ROS_INFO_STREAM("Damping matrix is:" << joint_damping_target_);
 }
@@ -301,16 +297,6 @@ void JointVariableImpedanceController::complianceJointParamCallback(
 
 void JointVariableImpedanceController::equilibriumConfigurationCallback( const sensor_msgs::JointState::ConstPtr& joint) {
   int i = 0;
-  Eigen::Matrix<double, 7, 1> q_d_damp;
-
-  for(int i=0; i<7; ++i)
-  {
-    q_d_damp[i] = joint->position[i];
-  }
-
-  calculateDamping(q_d_damp);
-  ROS_INFO_STREAM("Stiffness matrix is:" << joint_stiffness_target_);
-  ROS_INFO_STREAM("Damping matrix is:" << joint_damping_target_);
 
   for(int i=0; i<7; ++i)
   {

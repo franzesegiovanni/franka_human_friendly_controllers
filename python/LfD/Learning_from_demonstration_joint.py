@@ -2,7 +2,7 @@
 #!/usr/bin/env python
 #from winreg import REG_EXPAND_SZ
 import rospy
-import rosbag
+# import rosbag
 import math
 import numpy as np
 import time
@@ -139,8 +139,6 @@ class LfD():
 
 #%%    
 LfD=LfD()
-#%%
-LfD.load_file()
 #%%
 LfD.joint_rec() 
 
