@@ -23,6 +23,24 @@ from sensor_msgs.msg import Joy
 from pynput.keyboard import Listener, KeyCode
 from scipy.spatial.transform import Rotation
 
+def get_quaternion_from_euler(roll, pitch, yaw):
+  """
+  Convert an Euler angle to a quaternion.
+   
+  Input
+    :param roll: The roll (rotation around x-axis) angle in radians.
+    :param pitch: The pitch (rotation around y-axis) angle in radians.
+    :param yaw: The yaw (rotation around z-axis) angle in radians.
+ 
+  Output
+    :return qx, qy, qz, qw: The orientation in quaternion [x,y,z,w] format
+  """
+  qx = np.sin(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) - np.cos(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+  qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
+  qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
+  qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+ 
+  return [ qw ,qx, qy, qz]
 
 class Teleoperation():
     def __init__(self):
@@ -83,8 +101,10 @@ class Teleoperation():
             goal.pose.position.x = goal.pose.position.x + self.offset[0]
             goal.pose.position.y = goal.pose.position.y + self.offset[1]
             goal.pose.position.z = goal.pose.position.z + self.offset[2]
-            alpha_beta_gamma=np.array([self.offset[3], self.offset[4], self.offset[5]])
-            q_delta=from_euler_angles(alpha_beta_gamma)  
+            #alpha_beta_gamma=np.array([self.offset[3], self.offset[4], self.offset[5]])
+            #q_delta=from_euler_angles(alpha_beta_gamma) 
+            q_delta_array=get_quaternion_from_euler(self.offset[3], self.offset[4], self.offset[5])
+            q_delta=np.quaternion(q_delta_array[0],q_delta_array[1],q_delta_array[2],q_delta_array[3]) 
             quat_goal=q_delta*quat_goal
 
             goal.pose.orientation.w = quat_goal.w   
