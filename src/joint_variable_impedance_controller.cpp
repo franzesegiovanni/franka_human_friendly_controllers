@@ -283,13 +283,13 @@ void JointVariableImpedanceController::complianceJointParamCallback(
   joint_stiffness_target_(5,5) = config.joint_6;
   joint_stiffness_target_(6,6) = config.joint_7;
   damping_ratio=config.damping_ratio;
-  joint_damping_target_(0,0)=2*damping_ratio*joint_stiffness_target_(0,0); 
-  joint_damping_target_(1,1)=2*damping_ratio*joint_stiffness_target_(1,1) ;
-  joint_damping_target_(2,2)=2*damping_ratio*joint_stiffness_target_(2,2) ;
-  joint_damping_target_(3,3)=2*damping_ratio*joint_stiffness_target_(3,3) ;
-  joint_damping_target_(4,4)=2*damping_ratio*joint_stiffness_target_(4,4) ;
-  joint_damping_target_(5,5)=2*damping_ratio*joint_stiffness_target_(5,5) ;
-  joint_damping_target_(6,6)=2*damping_ratio*joint_stiffness_target_(6,6) ;
+  joint_damping_target_(0,0)=2*damping_ratio* sqrt(joint_stiffness_target_(0,0)); 
+  joint_damping_target_(1,1)=2*damping_ratio* sqrt(joint_stiffness_target_(1,1)) ;
+  joint_damping_target_(2,2)=2*damping_ratio* sqrt(joint_stiffness_target_(2,2)) ;
+  joint_damping_target_(3,3)=2*damping_ratio* sqrt(joint_stiffness_target_(3,3) );
+  joint_damping_target_(4,4)=2*damping_ratio* sqrt(joint_stiffness_target_(4,4) );
+  joint_damping_target_(5,5)=2*damping_ratio* sqrt(joint_stiffness_target_(5,5) );
+  joint_damping_target_(6,6)=2*damping_ratio* sqrt(joint_stiffness_target_(6,6) );
   ROS_INFO_STREAM("Stiffness matrix is:" << joint_stiffness_target_);
   ROS_INFO_STREAM("Damping matrix is:" << joint_damping_target_);
 }
