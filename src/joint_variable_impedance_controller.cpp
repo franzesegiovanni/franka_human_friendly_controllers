@@ -16,16 +16,7 @@ namespace franka_human_friendly_controllers {
 
 bool JointVariableImpedanceController::init(hardware_interface::RobotHW* robot_hw,
                                                ros::NodeHandle& node_handle) {
-  std::vector<double> cartesian_stiffness_vector;
-  std::vector<double> cartesian_damping_vector;
 
-
-  sub_stiffness_ = node_handle.subscribe(
-    "/stiffness", 20, &JointVariableImpedanceController::equilibriumStiffnessCallback, this,
-    ros::TransportHints().reliable().tcpNoDelay());
-  // sub_equilibrium_pose_ik = node_handle.subscribe(
-  //       "/equilibrium_pose", 1, &JointVariableImpedanceController::equilibriumConfigurationIKCallback, this,
-  //       ros::TransportHints().reliable().tcpNoDelay());
   sub_equilibrium_config_ = node_handle.subscribe(
       "/equilibrium_configuration", 20, &JointVariableImpedanceController::equilibriumConfigurationCallback, this,
       ros::TransportHints().reliable().tcpNoDelay());
@@ -33,9 +24,10 @@ bool JointVariableImpedanceController::init(hardware_interface::RobotHW* robot_h
   pub_stiff_update_ = node_handle.advertise<dynamic_reconfigure::Config>(
     "/dynamic_reconfigure_compliance_param_node/parameter_updates", 5);
 
-
+  // PUBLISHERS TO READ POSITION AND FORCE AT CONTROL FREQUENCY
   pub_cartesian_pose_= node_handle.advertise<geometry_msgs::PoseStamped>("/cartesian_pose",1);
   pub_force_torque_= node_handle.advertise<geometry_msgs::WrenchStamped>("/force_torque_ext",1);
+  // END
 
   std::string arm_id;
   if (!node_handle.getParam("arm_id", arm_id)) {
@@ -111,11 +103,6 @@ bool JointVariableImpedanceController::init(hardware_interface::RobotHW* robot_h
   dynamic_server_compliance_joint_param_->setCallback(
       boost::bind(&JointVariableImpedanceController::complianceJointParamCallback, this, _1, _2));
 
-  position_d_.setZero();
-  orientation_d_.coeffs() << 0.0, 0.0, 0.0, 1.0;
-
-  stiff_.setZero();
-
   return true;
 }
 
@@ -123,13 +110,10 @@ void JointVariableImpedanceController::starting(const ros::Time& /*time*/) {
   // compute initial velocity with jacobian and set x_attractor and q_d_nullspace
   // to initial configuration
   franka::RobotState initial_state = state_handle_->getRobotState();
-  // get jacobian
   Eigen::Map<Eigen::Matrix<double, 7, 1> > dq_initial(initial_state.dq.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > q_initial(initial_state.q.data());
-  Eigen::Affine3d initial_transform(Eigen::Matrix4d::Map(initial_state.O_T_EE.data()));
-  q_d_ = q_initial;
+  q_d_ = q_initial;  // this command sets the goal of the robot to the starting position. It allows to not have strange behavious of the controller
   force_torque_old.setZero();
-  double time_old=ros::Time::now().toSec();
 }
 
 void JointVariableImpedanceController::update(const ros::Time& /*time*/,
@@ -137,8 +121,6 @@ void JointVariableImpedanceController::update(const ros::Time& /*time*/,
   // get state variables
   franka::RobotState robot_state = state_handle_->getRobotState();
   std::array<double, 7> coriolis_array = model_handle_->getCoriolis();
-  std::array<double, 49> mass_array = model_handle_->getMass();
-  Eigen::Map<Eigen::Matrix<double, 7, 7> > mass(mass_array.data());
   std::array<double, 42> jacobian_array =
       model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
 
@@ -147,18 +129,17 @@ void JointVariableImpedanceController::update(const ros::Time& /*time*/,
   Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian(jacobian_array.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > q(robot_state.q.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > dq(robot_state.dq.data());
-  double time_=ros::Time::now().toSec();
 
-  Eigen::Map<Eigen::Matrix<double, 7, 1> > tau_J_d(  // NOLINT (readability-identifier-naming)
+  Eigen::Map<Eigen::Matrix<double, 7, 1> > tau_J_d( 
       robot_state.tau_J_d.data());
+
+ // STREAM OF DATA ON POSITION AND FORCE ON THE END EFFECTOR AT THE SAME FREQUENCY OF THE CONTROLLER
   Eigen::Map<Eigen::Matrix<double, 7, 1> > tau_ext(robot_state.tau_ext_hat_filtered.data());
-  std::array<double, 7> gravity = model_handle_->getGravity();
   Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
   Eigen::Vector3d position(transform.translation());
   Eigen::Quaterniond orientation(transform.linear());
   Eigen::Matrix<double, 7, 1>  tau_f;
   Eigen::MatrixXd jacobian_transpose_pinv;
-  Eigen::MatrixXd Null_mat;
 
   pseudoInverse(jacobian.transpose(), jacobian_transpose_pinv);
   tau_f(0) =  FI_11/(1+exp(-FI_21*(dq(0)+FI_31))) - TAU_F_CONST_1;
@@ -168,9 +149,7 @@ void JointVariableImpedanceController::update(const ros::Time& /*time*/,
   tau_f(4) =  FI_15/(1+exp(-FI_25*(dq(4)+FI_35))) - TAU_F_CONST_5;
   tau_f(5) =  FI_16/(1+exp(-FI_26*(dq(5)+FI_36))) - TAU_F_CONST_6;
   tau_f(6) =  FI_17/(1+exp(-FI_27*(dq(6)+FI_37))) - TAU_F_CONST_7;
-
   force_torque=force_torque-jacobian_transpose_pinv*(tau_ext-tau_f);
-
   // publish force, torque
   filter_step=filter_step+1;
   filter_step_=10;
@@ -197,20 +176,12 @@ void JointVariableImpedanceController::update(const ros::Time& /*time*/,
   pose_msg.pose.orientation.z=orientation.z();
   pose_msg.pose.orientation.w=orientation.w();
   pub_cartesian_pose_.publish(pose_msg);
-  pub_cartesian_pose_.publish(pose_msg);
-  // compute error to desired pose
+
+// END OF STREAM OF DATA. THIS PUBBLISHING CAN MAKE THE CONTROLLER SLOWER. 
 
   Eigen::VectorXd tau_joint(7), tau_d(7), error_vect(7), tau_joint_limit(7);
 
-
   error_vect.setZero();
-  // error_vect(0)=std::max(-0.1,std::min((q_d_(0) - q(0)),0.1));
-  // error_vect(1)=std::max(-0.1,std::min((q_d_(1) - q(1)),0.1));
-  // error_vect(2)=std::max(-0.1,std::min((q_d_(2) - q(2)),0.1));
-  // error_vect(3)=std::max(-0.1,std::min((q_d_(3) - q(3)),0.1));
-  // error_vect(4)=std::max(-0.1,std::min((q_d_(4) - q(4)),0.1));
-  // error_vect(5)=std::max(-0.1,std::min((q_d_(5) - q(5)),0.1));
-  // error_vect(6)=std::max(-0.1,std::min((q_d_(6) - q(6)),0.1));
   error_vect(0)=(q_d_(0) - q(0));
   error_vect(1)=(q_d_(1) - q(1));
   error_vect(2)=(q_d_(2) - q(2));
@@ -218,7 +189,10 @@ void JointVariableImpedanceController::update(const ros::Time& /*time*/,
   error_vect(4)=(q_d_(4) - q(4));
   error_vect(5)=(q_d_(5) - q(5));
   error_vect(6)=(q_d_(6) - q(6));
-  tau_joint << joint_stiffness_target_ * (error_vect) -  joint_damping_target_ * (dq); //double critic damping
+  
+  tau_joint << joint_stiffness_target_ * (error_vect) -  joint_damping_target_ * (dq);
+
+  // calculation of a repulsor when going close to a joint limit
   tau_joint_limit.setZero();
   if (q(0)>2.85)     { tau_joint_limit(0)=-10; }
   if (q(0)<-2.85)    { tau_joint_limit(0)=+10; }
@@ -235,7 +209,7 @@ void JointVariableImpedanceController::update(const ros::Time& /*time*/,
   if (q(6)>2.8)      { tau_joint_limit(6)=-10; }
   if (q(6)<-2.8)     { tau_joint_limit(6)=+10; }
   // Desired torque
-  tau_d << tau_joint + tau_joint_limit;
+  tau_d << tau_joint + coriolis + tau_joint_limit;
   // Saturate torque rate to avoid discontinuities
   tau_d << saturateTorqueRate(tau_d, tau_J_d);
   for (size_t i = 0; i < 7; ++i) {
@@ -255,27 +229,6 @@ Eigen::Matrix<double, 7, 1> JointVariableImpedanceController::saturateTorqueRate
   return tau_d_saturated;
 }
 
-void JointVariableImpedanceController::equilibriumStiffnessCallback(
-    const std_msgs::Float32MultiArray::ConstPtr& stiffness_){
-
-  int i = 0;
-  // print all the remaining numbers
-  for(std::vector<float>::const_iterator it = stiffness_->data.begin(); it != stiffness_->data.end(); ++it)
-  {
-    stiff_[i] = *it;
-    i++;
-  }
-  for (int i = 0; i < 7; i++){
-  for (int j = 0; j < 7; j++) {
-  joint_stiffness_target_(i,j)=std::max(std::min(stiff_[i+j], float(100.0)), float(0.0));
-  }
-  }
-
-  ROS_INFO_STREAM("Stiffness matrix is:" << joint_stiffness_target_);
-  calculateDamping(q_d_); //check what damping ratio is actually taking
-  ROS_INFO_STREAM("Damping matrix is:" << joint_damping_target_);
-}
-
 void JointVariableImpedanceController::complianceJointParamCallback(
     franka_human_friendly_controllers::compliance_joint_paramConfig& config, uint32_t /*level*/) {
   joint_stiffness_target_.setIdentity();
@@ -293,25 +246,12 @@ void JointVariableImpedanceController::complianceJointParamCallback(
   joint_damping_target_(3,3)=2*damping_ratio*joint_stiffness_target_(3,3) ;
   joint_damping_target_(4,4)=2*damping_ratio*joint_stiffness_target_(4,4) ;
   joint_damping_target_(5,5)=2*damping_ratio*joint_stiffness_target_(5,5) ;
-  joint_damping_target_(5,5)=2*damping_ratio*joint_stiffness_target_(6,6) ;
-  ROS_INFO_STREAM("Stiffness matrix is:" << joint_stiffness_target_);
-  ROS_INFO_STREAM("Damping matrix is:" << joint_damping_target_);
+  joint_damping_target_(6,6)=2*damping_ratio*joint_stiffness_target_(6,6) ;
 }
 
 
 void JointVariableImpedanceController::equilibriumConfigurationCallback( const sensor_msgs::JointState::ConstPtr& joint) {
-  int i = 0;
-  Eigen::Matrix<double, 7, 1> q_d_damp;
-
-  for(int i=0; i<7; ++i)
-  {
-    q_d_damp[i] = joint->position[i];
-  }
-
-  calculateDamping(q_d_damp);
-  ROS_INFO_STREAM("Stiffness matrix is:" << joint_stiffness_target_);
-  ROS_INFO_STREAM("Damping matrix is:" << joint_damping_target_);
-
+  
   for(int i=0; i<7; ++i)
   {
     q_d_[i] = joint->position[i];
