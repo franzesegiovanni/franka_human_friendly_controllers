@@ -76,8 +76,6 @@ class JointVariableImpedanceController : public controller_interface::MultiInter
   Eigen::Matrix<double, 6, 1> force_torque_old;
 
   ros::Publisher pub_stiff_update_;
-  ros::Publisher pub_cartesian_pose_;
-  ros::Publisher pub_force_torque_;
 
   hardware_interface::PositionJointInterface *_position_joint_interface;
   std::vector<hardware_interface::JointHandle> _position_joint_handles;

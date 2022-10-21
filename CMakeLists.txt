@@ -100,23 +100,18 @@ target_link_libraries(franka_gripper_online
    franka_gripper
 )
 
+target_include_directories(franka_gripper_online SYSTEM PUBLIC
+  ${catkin_INCLUDE_DIRS}
+)
+
+
 add_executable(read_ros
   src/read_ros.cpp
 )
 
-add_dependencies(read_ros
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
-  read_ros
-)
-
 target_link_libraries(read_ros
    ${catkin_LIBRARIES}
-   read_ros
-)
-
-target_include_directories(franka_gripper_online SYSTEM PUBLIC
-  ${catkin_INCLUDE_DIRS}
+   franka_human_friendly_controllers
 )
 
 ## Installation

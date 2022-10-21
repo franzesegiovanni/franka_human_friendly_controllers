@@ -28,7 +28,8 @@ mkdir -p catkin_ws/src
 cd catkin_ws
 source /opt/ros/<ros-distro>/setup.sh
 catkin_init_workspace src
-git clone --recursive https://github.com/frankaemika/franka_ros src/franka_ros
+cd src
+git clone --recursive https://github.com/frankaemika/franka_ros.git --branch 0.9.0 --single-branch
 rosdep install --from-paths src --ignore-src --rosdistro <ros-distro> -y --skip-keys libfranka
 source devel/setup.sh
 ```

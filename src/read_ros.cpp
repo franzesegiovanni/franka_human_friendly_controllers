@@ -35,10 +35,15 @@ void state_callback(franka_msgs::FrankaState robot_state)
   Eigen::Map<Eigen::Matrix<double, 7, 1> > tau_J_d(  // NOLINT (readability-identifier-naming)
       robot_state.tau_J_d.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > tau_ext(robot_state.tau_ext_hat_filtered.data());
+  std::array<double, 42> jacobian_array =
+      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+  // convert to eigen
+  Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian(jacobian_array.data());
   //std::array<double, 7> gravity = model_handle_->getGravity();
   Eigen::Matrix<double, 7, 1>  tau_f;
   Eigen::MatrixXd jacobian_transpose_pinv;
-  pseudoInverse(jacobian.transpose(), jacobian_transpose_pinv);
+  franka_human_friendly_controllers::pseudoInverse(jacobian.transpose(), jacobian_transpose_pinv);
+  Eigen::Map<Eigen::Matrix<double, 7, 1> > dq(robot_state.dq.data());
   
   // Compute the value of the friction
   tau_f(0) =  FI_11/(1+exp(-FI_21*(dq(0)+FI_31))) - TAU_F_CONST_1;
@@ -73,8 +78,8 @@ int main(int argc, char **argv)
 
   ros::Subscriber sub = read_state.subscribe("/franka_state_controller/franka_states", 1, state_callback);
 
-  ros::Publisher pub_cartesian_pose_= node_handle.advertise<geometry_msgs::PoseStamped>("/cartesian_pose",1);
-  ros::Publisher pub_force_torque_= node_handle.advertise<geometry_msgs::WrenchStamped>("/force_torque_ext",1);
+  ros::Publisher pub_cartesian_pose_= read_state.advertise<geometry_msgs::PoseStamped>("/cartesian_pose",1);
+  ros::Publisher pub_force_torque_= read_state.advertise<geometry_msgs::WrenchStamped>("/force_torque_ext",1);
 
 
   geometry_msgs::PoseStamped msg;

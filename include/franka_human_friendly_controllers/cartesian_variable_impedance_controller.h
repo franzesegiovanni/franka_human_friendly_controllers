@@ -95,11 +95,6 @@ class CartesianVariableImpedanceController : public controller_interface::MultiI
 
   ros::Publisher pub_stiff_update_;
 
-  ros::Publisher pub_cartesian_pose_;
-  ros::Publisher pub_force_torque_;
-
-
-
 
 };
 

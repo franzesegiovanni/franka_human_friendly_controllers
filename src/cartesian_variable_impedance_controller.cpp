@@ -34,10 +34,6 @@ bool CartesianVariableImpedanceController::init(hardware_interface::RobotHW* rob
   pub_stiff_update_ = node_handle.advertise<dynamic_reconfigure::Config>(
     "/dynamic_reconfigure_compliance_param_node/parameter_updates", 5);
 
-  pub_cartesian_pose_= node_handle.advertise<geometry_msgs::PoseStamped>("/cartesian_pose",1);
-
-  pub_force_torque_= node_handle.advertise<geometry_msgs::WrenchStamped>("/force_torque_ext",1);
-
   std::string arm_id;
   if (!node_handle.getParam("arm_id", arm_id)) {
     ROS_ERROR_STREAM("CartesianVariableImpedanceController: Could not read parameter arm_id");
@@ -175,61 +171,8 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   Eigen::MatrixXd jacobian_transpose_pinv;
   Eigen::MatrixXd Null_mat;
   pseudoInverse(jacobian.transpose(), jacobian_transpose_pinv);
-  // Compute the value of the friction
-  tau_f(0) =  FI_11/(1+exp(-FI_21*(dq(0)+FI_31))) - TAU_F_CONST_1;
-  tau_f(1) =  FI_12/(1+exp(-FI_22*(dq(1)+FI_32))) - TAU_F_CONST_2;
-  tau_f(2) =  FI_13/(1+exp(-FI_23*(dq(2)+FI_33))) - TAU_F_CONST_3;
-  tau_f(3) =  FI_14/(1+exp(-FI_24*(dq(3)+FI_34))) - TAU_F_CONST_4;
-  tau_f(4) =  FI_15/(1+exp(-FI_25*(dq(4)+FI_35))) - TAU_F_CONST_5;
-  tau_f(5) =  FI_16/(1+exp(-FI_26*(dq(5)+FI_36))) - TAU_F_CONST_6;
-  tau_f(6) =  FI_17/(1+exp(-FI_27*(dq(6)+FI_37))) - TAU_F_CONST_7;
 
-
-//Sliding window filter
- /*
-  force_torque=force_torque-jacobian_transpose_pinv*(tau_ext-tau_f);
-  // publish force, torque
-  filter_step=filter_step+1;
-  filter_step_=10; // this will make the force to be published at 1000/filter_step_ frequency
-  alpha=1;
-  if (filter_step==filter_step_){
-    geometry_msgs::WrenchStamped force_torque_msg;
-    force_torque_msg.wrench.force.x=force_torque_old[0]*(1-alpha)+force_torque[0]*alpha/(filter_step_);
-    force_torque_msg.wrench.force.y=force_torque_old[1]*(1-alpha)+ force_torque[1]*alpha/(filter_step_);
-    force_torque_msg.wrench.force.z=force_torque_old[2]*(1-alpha)+force_torque[2]*alpha/(filter_step_);
-    force_torque_msg.wrench.torque.x=force_torque_old[3]*(1-alpha)+force_torque[3]*alpha/(filter_step_);
-    force_torque_msg.wrench.torque.y=force_torque_old[4]*(1-alpha)+force_torque[4]*alpha/(filter_step_);
-    force_torque_msg.wrench.torque.z=force_torque_old[5]*(1-alpha)+force_torque[5]*alpha/(filter_step_);
-    pub_force_torque_.publish(force_torque_msg);
-    force_torque_old=force_torque/(filter_step_); //save the previous average 
-    force_torque.setZero();
-    //ddq.setZero();
-    filter_step=0;
-    }
-    */
-   //Low pass filter for the external force estimation
-  float iCutOffFrequency=10.0;
-  force_torque+=(-jacobian_transpose_pinv*(tau_ext-tau_f)-force_torque)*(1-exp(-0.001 * 2.0 * M_PI * iCutOffFrequency));
-  geometry_msgs::WrenchStamped force_torque_msg;
-  force_torque_msg.wrench.force.x=force_torque[0];
-  force_torque_msg.wrench.force.y=force_torque[1];
-  force_torque_msg.wrench.force.z=force_torque[2];
-  force_torque_msg.wrench.torque.x=force_torque[3];
-  force_torque_msg.wrench.torque.y=force_torque[4];
-  force_torque_msg.wrench.torque.z=force_torque[5];
-  pub_force_torque_.publish(force_torque_msg);
-  
-  geometry_msgs::PoseStamped pose_msg;
-  pose_msg.pose.position.x=position[0];
-  pose_msg.pose.position.y=position[1];
-  pose_msg.pose.position.z=position[2];
-  pose_msg.pose.orientation.x=orientation.x();
-  pose_msg.pose.orientation.y=orientation.y();
-  pose_msg.pose.orientation.z=orientation.z();
-  pose_msg.pose.orientation.w=orientation.w();
-  pub_cartesian_pose_.publish(pose_msg);
   // compute error to desired pose
-  // position error
   Eigen::Matrix<double, 6, 1> error;
   error.head(3) << position - position_d_;
 
