@@ -60,6 +60,7 @@ catkin_package(
 add_library(franka_human_friendly_controllers
   src/cartesian_variable_impedance_controller.cpp
   src/joint_variable_impedance_controller.cpp
+  src/model_read.cpp
 )
 
 add_dependencies(franka_human_friendly_controllers
