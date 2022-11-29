@@ -12,6 +12,7 @@ import dynamic_reconfigure.client
 from pynput.keyboard import Listener, KeyCode
 class LfD():
     def __init__(self):
+        rospy.init_node('LfD', anonymous=True)
         self.r=rospy.Rate(100)
         self.K_pos=600
         self.K_ori=30
@@ -192,29 +193,27 @@ class LfD():
 
             self.r.sleep()
 
-#%%
-if __name__ == '__main__':
-    rospy.init_node('LfD', anonymous=True)
 #%%    
-    LfD=LfD()
+LfD=LfD()
 
 #%%
 
-    LfD.traj_rec() 
+LfD.traj_rec() 
 
 #%%
-    start = PoseStamped()
-    
-    start.pose.position.x = LfD.recorded_traj[0][0]
-    start.pose.position.y = LfD.recorded_traj[1][0]
-    start.pose.position.z = LfD.recorded_traj[2][0]
+start = PoseStamped()
 
-    start.pose.orientation.w = LfD.recorded_ori[0][0] 
-    start.pose.orientation.x = LfD.recorded_ori[1][0] 
-    start.pose.orientation.y = LfD.recorded_ori[2][0] 
-    start.pose.orientation.z = LfD.recorded_ori[3][0] 
-    LfD.go_to_pose(start)
+start.pose.position.x = LfD.recorded_traj[0][0]
+start.pose.position.y = LfD.recorded_traj[1][0]
+start.pose.position.z = LfD.recorded_traj[2][0]
+
+start.pose.orientation.w = LfD.recorded_ori[0][0] 
+start.pose.orientation.x = LfD.recorded_ori[1][0] 
+start.pose.orientation.y = LfD.recorded_ori[2][0] 
+start.pose.orientation.z = LfD.recorded_ori[3][0] 
+
+LfD.go_to_pose(start)
 
 #%%
-    LfD.execute()
+LfD.execute()
 #%%
