@@ -1,4 +1,19 @@
 # Franka Human Friendly Controllers
+
+If you found this repo useful for your research, please cite it as:
+
+```
+@inproceedings{franzese2021ilosa,
+  title={ILoSA: Interactive learning of stiffness and attractors},
+  author={Franzese, Giovanni and M{\'e}sz{\'a}ros, Anna and Peternel, Luka and Kober, Jens},
+  booktitle={2021 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)},
+  pages={7778--7785},
+  year={2021},
+  organization={IEEE}
+}
+```
+# How to install the controller
+
 For more info: https://frankaemika.github.io/docs/installation_linux.html
 - Open a terminal pressing ctrl+alt+t
 
