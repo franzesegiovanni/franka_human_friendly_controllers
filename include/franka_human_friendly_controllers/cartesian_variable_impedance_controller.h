@@ -66,6 +66,7 @@ class CartesianVariableImpedanceController : public controller_interface::MultiI
   Eigen::Matrix<float, 7, 1> stiff_;
   Eigen::Vector3d position_d_;
   Eigen::Quaterniond orientation_d_;
+  Eigen::Quaterniond orientation_d_stiff_;
 
   double count_vibration{10000.0};
   double duration_vibration;
@@ -90,6 +91,9 @@ class CartesianVariableImpedanceController : public controller_interface::MultiI
   ros::Subscriber sub_stiffness_;
   void equilibriumStiffnessCallback(const std_msgs::Float32MultiArray::ConstPtr& stiffness_);
 
+  ros::Subscriber sub_rot_stiffness_;
+  void StiffnessEllipsoidPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg);  
+  // Make the robot to vibrate in the end effector
   ros::Subscriber sub_vibration_;
   void equilibriumVibrationCallback(const std_msgs::Float32::ConstPtr& vibration_);
 

@@ -27,6 +27,9 @@ bool CartesianVariableImpedanceController::init(hardware_interface::RobotHW* rob
   sub_stiffness_ = node_handle.subscribe(
     "/stiffness", 20, &CartesianVariableImpedanceController::equilibriumStiffnessCallback, this,
     ros::TransportHints().reliable().tcpNoDelay());
+  sub_rot_stiffness_ = node_handle.subscribe(
+    "/stiffness_rotation", 20, &CartesianVariableImpedanceController::StiffnessEllipsoidPoseCallback, this,
+    ros::TransportHints().reliable().tcpNoDelay());  
   sub_vibration_ = node_handle.subscribe(
       "/vibration", 20, &CartesianVariableImpedanceController::equilibriumVibrationCallback, this,
       ros::TransportHints().reliable().tcpNoDelay());
@@ -184,29 +187,6 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   tau_f(5) =  FI_16/(1+exp(-FI_26*(dq(5)+FI_36))) - TAU_F_CONST_6;
   tau_f(6) =  FI_17/(1+exp(-FI_27*(dq(6)+FI_37))) - TAU_F_CONST_7;
 
-
-//Sliding window filter
- /*
-  force_torque=force_torque-jacobian_transpose_pinv*(tau_ext-tau_f);
-  // publish force, torque
-  filter_step=filter_step+1;
-  filter_step_=10; // this will make the force to be published at 1000/filter_step_ frequency
-  alpha=1;
-  if (filter_step==filter_step_){
-    geometry_msgs::WrenchStamped force_torque_msg;
-    force_torque_msg.wrench.force.x=force_torque_old[0]*(1-alpha)+force_torque[0]*alpha/(filter_step_);
-    force_torque_msg.wrench.force.y=force_torque_old[1]*(1-alpha)+ force_torque[1]*alpha/(filter_step_);
-    force_torque_msg.wrench.force.z=force_torque_old[2]*(1-alpha)+force_torque[2]*alpha/(filter_step_);
-    force_torque_msg.wrench.torque.x=force_torque_old[3]*(1-alpha)+force_torque[3]*alpha/(filter_step_);
-    force_torque_msg.wrench.torque.y=force_torque_old[4]*(1-alpha)+force_torque[4]*alpha/(filter_step_);
-    force_torque_msg.wrench.torque.z=force_torque_old[5]*(1-alpha)+force_torque[5]*alpha/(filter_step_);
-    pub_force_torque_.publish(force_torque_msg);
-    force_torque_old=force_torque/(filter_step_); //save the previous average 
-    force_torque.setZero();
-    //ddq.setZero();
-    filter_step=0;
-    }
-    */
    //Low pass filter for the external force estimation
   float iCutOffFrequency=10.0;
   force_torque+=(-jacobian_transpose_pinv*(tau_ext-tau_f)-force_torque)*(1-exp(-0.001 * 2.0 * M_PI * iCutOffFrequency));
@@ -415,6 +395,20 @@ void CartesianVariableImpedanceController::complianceParamCallback(
   cartesian_damping_target_(4,4)=2.0 * sqrt(config.rotational_stiffness_Y);
   cartesian_damping_target_(5,5)=2.0 * sqrt(config.rotational_stiffness_Z);
   nullspace_stiffness_target_ = config.nullspace_stiffness;
+
+  // Use this if you want to use rotation matrix to change the orientation of the stiffness matrix
+  // Eigen::AngleAxisd rollAngle(config.roll, Eigen::Vector3d::UnitX());
+  // Eigen::AngleAxisd yawAngle(config.yaw, Eigen::Vector3d::UnitZ());
+  // Eigen::AngleAxisd pitchAngle(config.pitch, Eigen::Vector3d::UnitY());
+  // Eigen::Quaternion<double> q = rollAngle *  pitchAngle * yawAngle;
+  // Eigen::Matrix3d StiffRotationMatrix = q.matrix();
+  
+  // cartesian_stiffness_target_.block(0, 0, 3, 3)=StiffRotationMatrix*cartesian_stiffness_target_.block(0, 0, 3, 3)*StiffRotationMatrix.transpose();
+  // cartesian_stiffness_target_.block(3, 3, 6, 6)=StiffRotationMatrix*cartesian_stiffness_target_.block(3, 3, 6, 6)*StiffRotationMatrix.transpose();
+
+  // cartesian_damping_target_.block(0, 0, 3, 3)=StiffRotationMatrix*cartesian_damping_target_.block(0, 0, 3, 3)*StiffRotationMatrix.transpose();
+  // cartesian_damping_target_.block(3, 3, 6, 6)=StiffRotationMatrix*cartesian_damping_target_.block(3, 3, 6, 6)*StiffRotationMatrix.transpose();
+
 }
 
 
@@ -429,6 +423,31 @@ void CartesianVariableImpedanceController::equilibriumPoseCallback(
     orientation_d_.coeffs() << -orientation_d_.coeffs();
 }
 }
+
+void CartesianVariableImpedanceController::StiffnessEllipsoidPoseCallback(
+    const geometry_msgs::PoseStampedConstPtr& msg) {
+      // This subscriver is used to receive a pose and rotate the rotation matrix of that amount
+  Eigen::Quaterniond last_orientation_d_stiff_(orientation_d_stiff_);
+  orientation_d_stiff_.coeffs() << msg->pose.orientation.x, msg->pose.orientation.y,
+      msg->pose.orientation.z, msg->pose.orientation.w;
+  if (last_orientation_d_stiff_.coeffs().dot(orientation_d_stiff_.coeffs()) < 0.0) {
+    orientation_d_stiff_.coeffs() << -orientation_d_stiff_.coeffs();
+
+  Eigen::Matrix3d StiffRotationMatrix = orientation_d_stiff_.toRotationMatrix(); 
+
+  // Eigen::Vector3d euler = orientation_d_stiff_.toRotationMatrix().eulerAngles(0, 1, 2);
+
+  cartesian_stiffness_target_.block(0, 0, 3, 3)=StiffRotationMatrix*cartesian_stiffness_target_.block(0, 0, 3, 3)*StiffRotationMatrix.transpose();
+  cartesian_stiffness_target_.block(3, 3, 6, 6)=StiffRotationMatrix*cartesian_stiffness_target_.block(3, 3, 6, 6)*StiffRotationMatrix.transpose();
+  // ROS_INFO_STREAM("stiffness translational matrix is:" << cartesian_stiffness_linear_target_rotated_ );
+
+  cartesian_damping_target_.block(0, 0, 3, 3)=StiffRotationMatrix*cartesian_damping_target_.block(0, 0, 3, 3)*StiffRotationMatrix.transpose();
+  cartesian_damping_target_.block(3, 3, 6, 6)=StiffRotationMatrix*cartesian_damping_target_.block(3, 3, 6, 6)*StiffRotationMatrix.transpose();
+  // ROS_INFO_STREAM("damping translational matrix is:" << cartesian_damping_linear_target_rotated_ );
+
+}
+}
+
 void CartesianVariableImpedanceController::equilibriumConfigurationCallback( const std_msgs::Float32MultiArray::ConstPtr& joint) {
   int i = 0;
   for(std::vector<float>::const_iterator it = joint->data.begin(); it != joint->data.end(); ++it)
