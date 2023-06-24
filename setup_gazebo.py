@@ -44,7 +44,7 @@ subdirectory = os.path.join(parent_dir, 'franka_gazebo')
 
 
 new_text=''' 
- cartesian_variable_impedance_controller:
+cartesian_variable_impedance_controller:
   type: franka_human_friendly_controllers/CartesianVariableImpedanceController 
   arm_id: $(arg arm_id)
   joint_names:
@@ -95,5 +95,6 @@ replace_line(file_path, search_line, new_line)
 file_path = os.path.join(subdirectory, 'launch/panda.launch')
 print("Change files")
 print(file_path)
-new_text='<node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" required="false" />'
-add_text(file_path, new_text)
+existing_depend='</include>'
+new_depend='<node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" required="false" />'
+search_and_paste(file_path, existing_depend, new_depend)
