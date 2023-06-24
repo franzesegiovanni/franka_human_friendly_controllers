@@ -63,8 +63,9 @@ To run the controller:
 - In a different terminal (don't forget to source again): ``` rosrun franka_human_friendly_controllers franka_gripper_online ```
 
 # Run this in gazebo simulation
-First run 
-``` python3 setup_gazebo.py ```
+The first time you run it, set up gazebo with 
+``` python3 setup_gazebo.py ```.
+(don't run this every time you run gazebo). 
 
 To lunch the cartesian impedance controller in simulation: 
 
