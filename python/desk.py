@@ -16,6 +16,8 @@ import requests
 from requests.packages import urllib3
 from websockets.sync.client import connect
 
+import rospy
+from std_msgs.msg import Int32MultiArray
 
 _logger = logging.getLogger('desk')
 
@@ -72,6 +74,8 @@ class Desk:
     self._listen_thread = None
     self.login()
     self._legacy = False
+
+    self.button_publisher = rospy.Publisher('/robot_buttons', Int32MultiArray, queue_size=10)
     try:
       self.take_control()
     except ConnectionError as error:
@@ -342,19 +346,38 @@ class Desk:
     if self._listen_thread is not None:
       self._listen_thread.join()
 
-def event_callback(event: typing.Dict) -> None:
-    print("Received event:", event)
+  def button_callback(self, event: typing.Dict) -> None:
+      # print("Received event:", event)
+      feedback = [0,0,0,0]
+      buttons=['up', 'down', 'right', 'left']
+      read_events=list(event.keys())
+      for i in range(len(read_events)):
+        for j in range(len(buttons)):
+          if read_events[i] == buttons[j]:
+            if event[read_events[i]] == True:
+              feedback[j] = 1
+      print('buttons: ', buttons)
+      print('feedback: ', feedback)
+      #Publish this in as a ROS topic
+      msg = Int32MultiArray()
+      msg.data = feedback
+      self.button_publisher.publish(feedback)        
+
+          
+
 
 if __name__ == "__main__":
     hostname = "172.16.0.3"
     username = "franka_hri"
     password = "Panda2022"
 
+    #Start ROS node
+
     desk=Desk(hostname, username, password)
+    desk.listen(desk.button_callback)
+
 
     desk.unlock()
-
-    desk.listen(event_callback)
 
     input("Press Enter to stop listening...")
 
