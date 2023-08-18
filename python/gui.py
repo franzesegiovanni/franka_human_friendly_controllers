@@ -43,17 +43,20 @@ desk.listen(desk.button_callback)
 
 def fun1(event):
     print("Unlock the robot!")
-
-    # desk.unlock()
+    desk.take_control(force=True)
+    desk.unlock(force=True)
 def fun2(event):
     print("Lock the robot!")
     launch_manager.stop()
-    # desk.lock()
+    desk.lock()
+    desk.deactivate_fci()
 def fun3(event):
     print("Starting the cartesian impedance control!")
+    desk.activate_fci()
     launch_manager.start()
 def fun4(event):
     print("Stopping the cartesian impedance control!")
+    desk.deactivate_fci()
     launch_manager.stop()
 
 
