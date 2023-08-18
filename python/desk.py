@@ -12,9 +12,9 @@ import threading
 import typing
 from urllib import parse
 
-import requests
+import requests #pip install requests
 from requests.packages import urllib3
-from websockets.sync.client import connect
+from websockets.sync.client import connect #pip install --upgrade websockets
 
 import rospy
 from std_msgs.msg import Int32MultiArray

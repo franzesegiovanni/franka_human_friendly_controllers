@@ -1,10 +1,6 @@
 import roslaunch
 import rospy
 
-
-import roslaunch
-import rospy
-
 class LaunchManager:
     def __init__(self, package, launch_file, robot_ip):
         self.package = package
