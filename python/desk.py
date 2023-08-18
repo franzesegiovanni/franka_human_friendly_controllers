@@ -359,9 +359,8 @@ class Desk:
       print('buttons: ', buttons)
       print('feedback: ', feedback)
       #Publish this in as a ROS topic
-      msg = Int32MultiArray()
-      msg.data = feedback
-      self.button_publisher.publish(feedback)        
+      msg = Int32MultiArray(data=feedback)
+      self.button_publisher.publish(msg)        
 
           
 
@@ -372,7 +371,9 @@ if __name__ == "__main__":
     password = "Panda2022"
 
     #Start ROS node
-
+    rospy.init_node('Desk', anonymous=True)
+    rospy.sleep(1)
+    
     desk=Desk(hostname, username, password)
     desk.listen(desk.button_callback)
 
