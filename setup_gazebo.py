@@ -44,7 +44,7 @@ subdirectory = os.path.join(parent_dir, 'franka_gazebo')
 
 
 new_text=''' 
- cartesian_variable_impedance_controller:
+cartesian_variable_impedance_controller:
   type: franka_human_friendly_controllers/CartesianVariableImpedanceController 
   arm_id: $(arg arm_id)
   joint_names:
@@ -84,6 +84,21 @@ new_depend = '  franka_human_friendly_controllers'
 # new_depend = new_depend.replace("franka_advanced_controllers", input_string)
 search_and_paste(file_path, existing_depend, new_depend)
 
+# Modify the controller to not have the joint repulsion that generated obscillations in sumulation 
+file_path = parent_dir + '/franka_human_friendly_controllers/src/cartesian_variable_impedance_controller.cpp'
+print("Change files in directory")
+print(file_path)
+search_line= 'tau_d << tau_task + tau_nullspace + coriolis+ tau_joint_limit;'
+new_line='tau_d << tau_task + tau_nullspace + coriolis;'
+replace_line(file_path, search_line, new_line)
+
+# Modify the joint impedance control also
+file_path = parent_dir + '/franka_human_friendly_controllers/src/joint_variable_impedance_controller.cpp'
+print("Change files in directory")
+print(file_path)
+search_line= 'tau_d << tau_joint + coriolis + tau_joint_limit;'
+new_line='tau_d << tau_joint + coriolis;'
+replace_line(file_path, search_line, new_line)
 # MODIFY THE CLOCK
 file_path = os.path.join(subdirectory, 'launch/robot.launch')
 search_line = '<arg name="use_sim_time" value="true"/>'
@@ -95,5 +110,6 @@ replace_line(file_path, search_line, new_line)
 file_path = os.path.join(subdirectory, 'launch/panda.launch')
 print("Change files")
 print(file_path)
-new_text='<node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" required="false" />'
-add_text(file_path, new_text)
+existing_depend='</include>'
+new_depend='<node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" required="false" />'
+search_and_paste(file_path, existing_depend, new_depend)
