@@ -36,6 +36,9 @@ To run the controller:
 The first time you run it, set up Gazebo with 
 ``` python3 setup_gazebo.py ```. 
 
+Compile again: 
+``` catkin_make -DMAKE_BUILD_TYPE=Release -DFranka_DIR:PATH=~/libfranka/build```. 
+
 To lunch the cartesian impedance controller in simulation: 
 
 ``` roslaunch franka_gazebo panda.launch x:=-0.5 world:=$(rospack find franka_gazebo)/world/stone.sdf controller:=cartesian_variable_impedance_controller rviz:=true ```
