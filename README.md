@@ -44,7 +44,7 @@ To lunch the cartesian impedance controller in simulation:
 ``` roslaunch franka_gazebo panda.launch x:=-0.5 world:=$(rospack find franka_gazebo)/world/stone.sdf controller:=cartesian_variable_impedance_controller rviz:=true ```
 
 To kill gazebo run:
-``` killall -9 gazebo & killall -9 gzserver  & killall -9 gzclient ```
+``` killall -9 gazebo & killall -9 gzserver  & killall -9 gzclient & killall -9 rosmaster & killall -9 roscore killall -9 rviz```
 # Disagreement-aware Variable Impedance controller (DAVI)
 To run the demo of teaching the robot where and how to place a paper cup:
 - Open a new terminal in src/franka_human_friendly_controllers/python/DAVI
