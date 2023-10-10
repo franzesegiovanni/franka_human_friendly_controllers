@@ -43,9 +43,23 @@ subdirectory = os.path.join(parent_dir, 'franka_gazebo')
 # Print the path to the subdirectory
 
 
-new_text=''' 
+new_text_cartesian=''' 
 cartesian_variable_impedance_controller:
   type: franka_human_friendly_controllers/CartesianVariableImpedanceController 
+  arm_id: $(arg arm_id)
+  joint_names:
+    - $(arg arm_id)_joint1
+    - $(arg arm_id)_joint2
+    - $(arg arm_id)_joint3
+    - $(arg arm_id)_joint4
+    - $(arg arm_id)_joint5
+    - $(arg arm_id)_joint6
+    - $(arg arm_id)_joint7 
+'''
+
+new_text_joint=''' 
+joint_variable_impedance_controller:
+  type: franka_human_friendly_controllers/JointVariableImpedanceController 
   arm_id: $(arg arm_id)
   joint_names:
     - $(arg arm_id)_joint1
@@ -62,7 +76,8 @@ cartesian_variable_impedance_controller:
 file_path=os.path.join(subdirectory, 'config/sim_controllers.yaml')
 print("Change files")
 print(file_path)
-add_text(file_path, new_text)
+add_text(file_path, new_text_cartesian)
+add_text(file_path, new_text_joint)
 
 # MODIFY THE PACKAGE
 file_path = os.path.join(subdirectory, 'package.xml')
@@ -99,6 +114,8 @@ print(file_path)
 search_line= 'tau_d << tau_joint + coriolis + tau_joint_limit;'
 new_line='tau_d << tau_joint + coriolis;'
 replace_line(file_path, search_line, new_line)
+
+
 # MODIFY THE CLOCK
 file_path = os.path.join(subdirectory, 'launch/robot.launch')
 search_line = '<arg name="use_sim_time" value="true"/>'
