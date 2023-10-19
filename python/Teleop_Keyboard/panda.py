@@ -23,10 +23,9 @@ class Panda():
         
         # Subscriber to get robot end effector pose in cartesian space
         self.pos_sub=rospy.Subscriber("/cartesian_pose", PoseStamped, self.ee_pos_callback)
-
+        # x = PoseStamped.
         # Publisher to send a new robot end effector pose goal/attractor in cartesian space
         self.goal_pub = rospy.Publisher("/equilibrium_pose", PoseStamped, queue_size=0)
-        
 
         rospy.sleep(1)
 

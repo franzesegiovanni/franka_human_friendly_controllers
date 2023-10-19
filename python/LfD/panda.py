@@ -76,11 +76,11 @@ class Panda():
         ns_msg = [0, 0, 0, -2.4, 0, 2.4, 0]
         self.go_to_pose(goal)
         self.set_configuration(ns_msg)
-        self.set_K.update_configuration({'nullspace_stiffness':10})
+        self.set_K.update_configuration({f'{str(self.name)}_nullspace_stiffness':10})
 
         rospy.sleep(rospy.Duration(secs=5))
 
-        self.set_K.update_configuration({'nullspace_stiffness':0})
+        self.set_K.update_configuration({f'{str(self.name)}_nullspace_stiffness':0})
 
     def home_gripper(self):
         self.homing_pub.publish(self.home_command)
@@ -136,6 +136,7 @@ class Panda():
             q_start.w=-q_start.w
         inner_prod=q_start.x*q_goal.x+q_start.y*q_goal.y+q_start.z*q_goal.z+q_start.w*q_goal.w
         theta= np.arccos(np.abs(inner_prod))
+        print(theta)
         
         step_num_polar = math.floor(theta / interp_dist_polar)
         

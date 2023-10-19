@@ -79,6 +79,51 @@ class LfD(Panda):
         self.goal_pub.publish(goal)
         self.set_stiffness(100, 100, 100, 5, 5, 5, 0)
         rospy.loginfo("Ending trajectory recording")
+    
+    def traj_rec_keyboard(self, trigger=0.005, rec_position=True, rec_orientation=True):
+        # trigger for starting the recording
+        # if rec_position: 
+        #     self.set_K.update_configuration({"translational_stiffness_X": 0})
+        #     self.set_K.update_configuration({"translational_stiffness_Y": 0})
+        #     self.set_K.update_configuration({"translational_stiffness_Z": 0})
+        # if rec_orientation: 
+        #     self.set_K.update_configuration({"rotational_stiffness_X": 0})
+        #     self.set_K.update_configuration({"rotational_stiffness_Y": 0})
+        #     self.set_K.update_configuration({"rotational_stiffness_Z": 0})
+        # self.set_K.update_configuration({"nullspace_stiffness": 0})  
+        self.end=False
+        init_pos = self.curr_pos
+        robot_perturbation = 0
+        print("Move robot to start recording.")
+        while robot_perturbation < trigger:
+            robot_perturbation = math.sqrt((self.curr_pos[0]-init_pos[0])**2 + (self.curr_pos[1]-init_pos[1])**2 + (self.curr_pos[2]-init_pos[2])**2)
+        
+        self.recorded_traj = self.curr_pos
+        self.recorded_ori = self.curr_ori
+        self.recorded_gripper = self.gripper_open_width
+
+        
+        print("Recording started. Press ESC to stop.")
+        while not self.end:
+            if self.gripper_width < (self.gripper_open_width - self.gripper_sensitivity):
+                # print("Close gripper")
+                self.grip_value = 0 #Close the gripper
+            else:
+                # print("Open gripper")
+                self.grip_value = self.gripper_open_width #Open the gripper
+
+            self.recorded_traj = np.c_[self.recorded_traj, self.curr_pos]
+            self.recorded_ori  = np.c_[self.recorded_ori, self.curr_ori]
+            self.recorded_gripper = np.c_[self.recorded_gripper, self.grip_value]
+
+            
+            self.r.sleep()
+
+        quat_goal = list_2_quaternion(self.curr_ori)
+        goal = array_quat_2_pose(self.curr_pos, quat_goal)
+        self.goal_pub.publish(goal)
+        self.set_stiffness(100, 100, 100, 5, 5, 5, 0)
+        rospy.loginfo("Ending trajectory recording")
 
     def execute(self):
         self.set_stiffness(1000, 1000, 1000, 30, 30, 30, 0)

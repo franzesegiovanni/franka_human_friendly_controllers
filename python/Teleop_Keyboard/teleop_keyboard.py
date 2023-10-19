@@ -30,6 +30,8 @@ class TeleopKeyboard(Panda):
         # Subscriber to keyboard from teleop_twist_keyboard package
         self.key_sub=rospy.Subscriber("/cmd_vel", Twist, self.keyboard_read_callback)
         
+        # Amount to move the robot 
+        self.move_distance = 0.005 
         # This funciton is needed to keep the node running 
         rospy.spin()
 
@@ -57,17 +59,17 @@ class TeleopKeyboard(Panda):
             # Set this to the current value as it needs some orientation value to publish to /equilibrium_pose
             quat_goal = list_2_quaternion(self.curr_ori)
             # Get current postion and add 1 mm to the z axis
-            goal = array_quat_2_pose(self.curr_pos + np.array([0.0, 0.0, 0.001]), quat_goal)
+            goal = array_quat_2_pose(self.curr_pos + np.array([0.0, 0.0, self.move_distance]), quat_goal)
             self.goal_pub.publish(goal)
             self.key_value.linear.x = 0.0 
-            print("moved Robot up 1 mm")
+            print("moved Robot up 5 mm")
 
         # - Z axis
         elif self.key_value.linear.x == -0.5 and self.key_value.angular.z == 0.0:
             # Set this to the current value as it needs some orientation value to publish to /equilibrium_pose
             quat_goal = list_2_quaternion(self.curr_ori)
             # Get current postion and add 1 mm to the z axis
-            goal = array_quat_2_pose(self.curr_pos + np.array([0.0, 0.0, -0.001]), quat_goal)
+            goal = array_quat_2_pose(self.curr_pos + np.array([0.0, 0.0, -self.move_distance]), quat_goal)
             self.goal_pub.publish(goal)
             self.key_value.linear.x = 0.0 
             print("moved Robot down 1 mm")
@@ -78,7 +80,7 @@ class TeleopKeyboard(Panda):
             # Set this to the current value as it needs some orientation value to publish to /equilibrium_pose
             quat_goal = list_2_quaternion(self.curr_ori)
             # Get current postion and add 1 mm to the z axis
-            goal = array_quat_2_pose(self.curr_pos + np.array([0.0, 0.001, 0.0]), quat_goal)
+            goal = array_quat_2_pose(self.curr_pos + np.array([0.0, self.move_distance, 0.0]), quat_goal)
             self.goal_pub.publish(goal)
             self.key_value.angular.z = 0.0
             print("moved Robot left 1 mm")
@@ -88,7 +90,7 @@ class TeleopKeyboard(Panda):
             # Set this to the current value as it needs some orientation value to publish to /equilibrium_pose
             quat_goal = list_2_quaternion(self.curr_ori)
             # Get current postion and add 1 mm to the z axis
-            goal = array_quat_2_pose(self.curr_pos + np.array([0.0, -0.001, 0.0]), quat_goal)
+            goal = array_quat_2_pose(self.curr_pos + np.array([0.0, -self.move_distance, 0.0]), quat_goal)
             self.goal_pub.publish(goal)
             self.key_value.angular.z = 0.0
             print("moved Robot right 1 mm")
@@ -99,7 +101,7 @@ class TeleopKeyboard(Panda):
             # Set this to the current value as it needs some orientation value to publish to /equilibrium_pose
             quat_goal = list_2_quaternion(self.curr_ori)
             # Get current postion and add 1 mm to the z axis
-            goal = array_quat_2_pose(self.curr_pos + np.array([0.001, 0.0, 0.0]), quat_goal)
+            goal = array_quat_2_pose(self.curr_pos + np.array([self.move_distance, 0.0, 0.0]), quat_goal)
             self.goal_pub.publish(goal)
             self.key_value.angular.z = 0.0
             print("moved Robot left 1 mm")
@@ -109,7 +111,7 @@ class TeleopKeyboard(Panda):
             # Set this to the current value as it needs some orientation value to publish to /equilibrium_pose
             quat_goal = list_2_quaternion(self.curr_ori)
             # Get current postion and add 1 mm to the z axis
-            goal = array_quat_2_pose(self.curr_pos + np.array([-0.001, 0.0, 0.0]), quat_goal)
+            goal = array_quat_2_pose(self.curr_pos + np.array([-self.move_distance, 0.0, 0.0]), quat_goal)
             self.goal_pub.publish(goal)
             self.key_value.angular.z = 0.0
             print("moved Robot right 1 mm")
