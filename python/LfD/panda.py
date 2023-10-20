@@ -10,6 +10,7 @@ from std_msgs.msg import Float32MultiArray
 import dynamic_reconfigure.client
 from pose_transform_functions import  array_quat_2_pose
 from franka_gripper.msg import GraspActionGoal, HomingActionGoal, StopActionGoal, MoveActionGoal
+
 class Panda():
     def __init__(self):
         super(Panda, self).__init__()
@@ -43,7 +44,7 @@ class Panda():
         self.grasp_command = GraspActionGoal()
         self.home_command = HomingActionGoal()
         self.stop_command = StopActionGoal()
-        self.gripper_width = 0
+        self.curr_grip_width = 0.0
         self.move_command.goal.speed=1
         self.grasp_command.goal.epsilon.inner = 0.3
         self.grasp_command.goal.epsilon.outer = 0.3
@@ -94,7 +95,7 @@ class Panda():
 
     def joint_states_callback(self, data):
         self.curr_joint = data.position[:7]
-        self.gripper_width = data.position[7] + data.position[8]
+        self.curr_gripper_width = data.position[7] + data.position[8]
         
     def set_stiffness(self, k_t1, k_t2, k_t3,k_r1,k_r2,k_r3, k_ns):
         

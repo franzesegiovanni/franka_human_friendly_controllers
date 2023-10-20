@@ -22,6 +22,8 @@ from std_msgs.msg import Float32MultiArray, Float32
 from sensor_msgs.msg import Joy
 from pynput.keyboard import Listener, KeyCode
 from scipy.spatial.transform import Rotation
+from panda import Panda
+
 
 def get_quaternion_from_euler(roll, pitch, yaw):
   """
@@ -42,30 +44,57 @@ def get_quaternion_from_euler(roll, pitch, yaw):
  
   return [ qw ,qx, qy, qz]
 
-class Teleoperation():
+class Teleoperation(Panda):
     def __init__(self):
+        rospy.init_node('Teleoperation', anonymous=True)
+        super(Teleoperation, self).__init__()
         self.control_freq=rospy.Rate(100)
         self.offset = [0, 0, 0, 0, 0, 0]
+        # self.offset_gripper = [0, 0]
+        self.offset_gripper = 0.0
         self.curr_pos = None
         self.joint_pos = None
         self.joy_sub=rospy.Subscriber("/spacenav/joy", Joy, self.spacenav_callback)
-        self.pos_sub=rospy.Subscriber("/cartesian_pose", PoseStamped, self.ee_pos_callback)
-        self.goal_pub = rospy.Publisher('/equilibrium_pose', PoseStamped, queue_size=0)  
+
+        self.pos_scale = 0.005
+        self.ori_scale = 0.005
+        # TODO Range of gripper is 
+        self.gripper_scale = 0.0001 
+
+        # self.pos_sub=rospy.Subscriber("/cartesian_pose", PoseStamped, self.ee_pos_callback)
+        # self.goal_pub = rospy.Publisher('/equilibrium_pose', PoseStamped, queue_size=0)  
+        # TODO not sure why this needs to be reinitialize again here as a real value
         self.curr_pos = np.array([0.5, 0, 0.5])
         self.curr_ori = np.array([1, 0, 0, 0])
+        # self.curr_grip_width = 0.0
 
+        rospy.sleep(1)
+        
 
     def spacenav_callback(self, data):
-        self.offset[0]= 0.002*data.axes[0]
-        self.offset[1]= 0.002*data.axes[1]
-        self.offset[2]= 0.002*data.axes[2]
-        self.offset[3]= 0.02*data.axes[3]
-        self.offset[4]= 0.02*data.axes[4] 
-        self.offset[5]= 0.02*data.axes[5]
+        self.offset[0]= self.pos_scale*data.axes[0]
+        self.offset[1]= self.pos_scale*data.axes[1]
+        self.offset[2]= self.pos_scale*data.axes[2]
+        self.offset[3]= self.ori_scale*data.axes[3]
+        self.offset[4]= self.ori_scale*data.axes[4] 
+        self.offset[5]= self.ori_scale*data.axes[5]
+       
+        # To open gripper
+        if data.buttons[0] == 1 and data.buttons[1] == 0:
+            print("type(data.buttons[0]): ", type(data.buttons[0]))
+            self.offset_gripper = self.gripper_scale*data.buttons[0]
 
-    def ee_pos_callback(self, data):
-        self.curr_pos = np.array([data.pose.position.x, data.pose.position.y, data.pose.position.z])
-        self.curr_ori = np.array([data.pose.orientation.w, data.pose.orientation.x, data.pose.orientation.y, data.pose.orientation.z])
+        # To close gripper 
+        elif data.buttons[0] == 0 and data.buttons[1] == 1:
+            self.offset_gripper = -self.gripper_scale*data.buttons[1]
+
+        # Both buttons pressed don't do anything
+        elif data.buttons[0] == 1 and data.buttons[1] == 1:
+            print("Both buttons pressed... press one at a time!")
+
+    # def ee_pos_callback(self, data):
+    #     self.curr_pos = np.array([data.pose.position.x, data.pose.position.y, data.pose.position.z])
+    #     self.curr_ori = np.array([data.pose.orientation.w, data.pose.orientation.x, data.pose.orientation.y, data.pose.orientation.z])
 
 
   
@@ -96,8 +125,11 @@ class Teleoperation():
         self.goal_pub.publish(goal)  
         quat_goal=np.quaternion(self.curr_ori[0],self.curr_ori[1],self.curr_ori[2],self.curr_ori[3])
 
+        goal_grip = self.curr_grip_width   
+
         while not rospy.is_shutdown(): 
-   
+            
+            # Update position values 
             goal.pose.position.x = goal.pose.position.x + self.offset[0]
             goal.pose.position.y = goal.pose.position.y + self.offset[1]
             goal.pose.position.z = goal.pose.position.z + self.offset[2]
@@ -107,12 +139,20 @@ class Teleoperation():
             q_delta=np.quaternion(q_delta_array[0],q_delta_array[1],q_delta_array[2],q_delta_array[3]) 
             quat_goal=q_delta*quat_goal
 
+            # Update orientation values 
             goal.pose.orientation.w = quat_goal.w   
             goal.pose.orientation.x = quat_goal.x
             goal.pose.orientation.y = quat_goal.y
             goal.pose.orientation.z = quat_goal.z
-        
+             
+            # Update gripper values 
+
+            goal_grip = goal_grip + self.offset_gripper
+            self.offset_gripper = 0.0
+            print("New gripper goal = ", goal_grip)
+    
             self.goal_pub.publish(goal)            
+            self.move_gripper(goal_grip)
         
             self.control_freq.sleep()
         
