@@ -95,7 +95,7 @@ class Panda():
 
     def joint_states_callback(self, data):
         self.curr_joint = data.position[:7]
-        self.curr_gripper_width = data.position[7] + data.position[8]
+        self.gripper_width = data.position[7] + data.position[8]
         
     def set_stiffness(self, k_t1, k_t2, k_t3,k_r1,k_r2,k_r3, k_ns):
         
