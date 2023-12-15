@@ -73,10 +73,14 @@ class Panda():
         goal = array_quat_2_pose(pos_array, quat)
         goal.header.seq = 1
         goal.header.stamp = rospy.Time.now()
+        
 
+        self.set_stiffness(self.K_pos, self.K_pos, self.K_pos, self.K_ori, self.K_ori, self.K_ori, self.K_ns)
         ns_msg = [0, 0, 0, -2.4, 0, 2.4, 0]
+
         self.go_to_pose(goal)
         self.set_configuration(ns_msg)
+
         self.set_K.update_configuration({"nullspace_stiffness": 10})
 
         rospy.sleep(rospy.Duration(secs=5))
