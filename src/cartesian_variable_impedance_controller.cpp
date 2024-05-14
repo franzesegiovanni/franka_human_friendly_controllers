@@ -23,10 +23,6 @@ bool CartesianVariableImpedanceController::init(hardware_interface::RobotHW* rob
   sub_equilibrium_config_ = node_handle.subscribe(
       "/equilibrium_configuration", 20, &CartesianVariableImpedanceController::equilibriumConfigurationCallback, this,
       ros::TransportHints().reliable().tcpNoDelay());
-  // We want to add the subscriber to the note for reading the desired stiffness in the different directions
-  sub_stiffness_ = node_handle.subscribe(
-    "/stiffness", 20, &CartesianVariableImpedanceController::equilibriumStiffnessCallback, this,
-    ros::TransportHints().reliable().tcpNoDelay());
   sub_rot_stiffness_ = node_handle.subscribe(
     "/stiffness_rotation", 20, &CartesianVariableImpedanceController::StiffnessEllipsoidPoseCallback, this,
     ros::TransportHints().reliable().tcpNoDelay());  
