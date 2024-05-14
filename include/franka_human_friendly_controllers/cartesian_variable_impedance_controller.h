@@ -41,8 +41,12 @@ class CartesianVariableImpedanceController : public controller_interface::MultiI
  private:
   // Saturation
   Eigen::Matrix<double, 7, 1> saturateTorqueRate(
-      const Eigen::Matrix<double, 7, 1>& tau_d_calculated,
-      const Eigen::Matrix<double, 7, 1>& tau_J_d);  // NOLINT (readability-identifier-naming)
+  const Eigen::Matrix<double, 7, 1>& tau_d_calculated,
+  const Eigen::Matrix<double, 7, 1>& tau_J_d);  // NOLINT (readability-identifier-naming)
+
+  double calculateTauJointLimit(double q_value, double threshold, double magnitude, double upper_bound, double lower_bound);
+
+
 
   std::unique_ptr<franka_hw::FrankaStateHandle> state_handle_;
   std::unique_ptr<franka_hw::FrankaModelHandle> model_handle_;
@@ -71,6 +75,9 @@ class CartesianVariableImpedanceController : public controller_interface::MultiI
   double count_vibration{10000.0};
   double duration_vibration;
   bool vibrate= false;
+
+  double joint_limits[7][2];
+
   // Dynamic reconfigure
   std::unique_ptr<dynamic_reconfigure::Server<franka_human_friendly_controllers::compliance_paramConfig>>
       dynamic_server_compliance_param_;

@@ -116,12 +116,30 @@ bool CartesianVariableImpedanceController::init(hardware_interface::RobotHW* rob
 
   position_d_.setZero();
   orientation_d_.coeffs() << 0.0, 0.0, 0.0, 1.0;
-  //position_d_target_.setZero();
-  //orientation_d_target_.coeffs() << 0.0, 0.0, 0.0, 1.0;
   cartesian_stiffness_.setZero();
   cartesian_damping_.setZero();
 
   stiff_.setZero();
+
+      // Define variables to store parameter values
+    const std::string limit_types[2] = {"lower", "upper"};
+
+  // Read parameters from the parameter server
+  for (int i = 0; i < 7; ++i) {
+      for (const std::string& limit_type : limit_types) {
+          std::string param_name = "/joint" + std::to_string(i + 1) + "/limit/" + limit_type;
+          if (!node_handle.getParam(param_name, joint_limits[i][limit_type == "lower" ? 0 : 1])) {
+              ROS_ERROR("Failed to retrieve parameter: %s", param_name.c_str());
+              return 1;
+          }
+      }
+  }
+
+    // Stream the parameter values
+    ROS_INFO("Joint limits:");
+    for (int i = 0; i < 7; ++i) {
+        ROS_INFO("Joint %d: lower=%.4f, upper=%.4f", i + 1, joint_limits[i][0], joint_limits[i][1]);
+    }
 
   return true;
 }
@@ -140,9 +158,7 @@ void CartesianVariableImpedanceController::starting(const ros::Time& /*time*/) {
   Eigen::Affine3d initial_transform(Eigen::Matrix4d::Map(initial_state.O_T_EE.data()));
   // set equilibrium point to current state
   position_d_ = initial_transform.translation(); // this allows the robot to start on the starting configuration
-  orientation_d_ = Eigen::Quaterniond(initial_transform.linear()); // this allows the robot to start on the starting configuration
-  //position_d_target_ = initial_transform.translation();
-  //orientation_d_target_ = Eigen::Quaterniond(initial_transform.linear());
+  orientation_d_ = Eigen::Quaterniond(initial_transform.linear()); // this allows the robot to start on the
   // set nullspace equilibrium configuration to initial q
   q_d_nullspace_ = q_initial;
   force_torque_old.setZero();
@@ -176,7 +192,6 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   Eigen::Quaterniond orientation(transform.linear());
   Eigen::Matrix<double, 7, 1>  tau_f;
   Eigen::MatrixXd jacobian_transpose_pinv;
-  Eigen::MatrixXd Null_mat;
   pseudoInverse(jacobian.transpose(), jacobian_transpose_pinv);
   // Compute the value of the friction
   tau_f(0) =  FI_11/(1+exp(-FI_21*(dq(0)+FI_31))) - TAU_F_CONST_1;
@@ -231,15 +246,11 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   // pseudoinverse for nullspace handling
   // kinematic pseuoinverse
 
-  Null_mat=(Eigen::MatrixXd::Identity(7, 7) -jacobian.transpose() * jacobian_transpose_pinv);
   null_vect.setZero();
-  null_vect(0)=(q_d_nullspace_(0) - q(0));
-  null_vect(1)=(q_d_nullspace_(1) - q(1));
-  null_vect(2)=(q_d_nullspace_(2) - q(2));
-  null_vect(3)=(q_d_nullspace_(3) - q(3));
-  null_vect(4)=(q_d_nullspace_(4) - q(4));
-  null_vect(5)=(q_d_nullspace_(5) - q(5));
-  null_vect(6)=(q_d_nullspace_(6) - q(6));
+  for (int i = 0; i < 7; ++i) {
+      null_vect(i) = q_d_nullspace_(i) - q(i);
+  }
+
   // Cartesian PD control with damping ratio = 1
   tau_task << jacobian.transpose() *
                   (-cartesian_stiffness_ * error -  cartesian_damping_ * (jacobian * dq)); //double critic damping
@@ -247,22 +258,25 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   tau_nullspace << (Eigen::MatrixXd::Identity(7, 7) -
                     jacobian.transpose() * jacobian_transpose_pinv) *
                        (nullspace_stiffness_ * null_vect -
-                        1*(2.0 * sqrt(nullspace_stiffness_)) * dq); //double critic damping
+                        (2.0 * sqrt(nullspace_stiffness_)) * dq); //double critic damping
   tau_joint_limit.setZero();
-  if (q(0)>2.85)     { tau_joint_limit(0)=-10; }
-  if (q(0)<-2.85)    { tau_joint_limit(0)=+10; }
-  if (q(1)>1.7)      { tau_joint_limit(1)=-10; }
-  if (q(1)<-1.7)     { tau_joint_limit(1)=+10; }
-  if (q(2)>2.85)     { tau_joint_limit(2)=-10; }
-  if (q(2)<-2.85)    { tau_joint_limit(2)=+10; }
-  if (q(3)>-0.1)     { tau_joint_limit(3)=-10; }
-  if (q(3)<-3.0)     { tau_joint_limit(3)=+10; }
-  if (q(4)>2.85)     { tau_joint_limit(4)=-10; }
-  if (q(4)<-2.85)    { tau_joint_limit(4)=+10; }
-  if (q(5)>3.7)      { tau_joint_limit(5)=-10; }
-  if (q(5)<-0.1)     { tau_joint_limit(5)=+10; }
-  if (q(6)>2.8)      { tau_joint_limit(6)=-10; }
-  if (q(6)<-2.8)     { tau_joint_limit(6)=+10; }
+
+  // (double q_value, double threshold, double magnitude, double upper_bound, double lower_bound) 
+  tau_joint_limit(0) = calculateTauJointLimit(q(0), 0.05, 4.0, joint_limits[0][1], joint_limits[0][0]); 
+  tau_joint_limit(1) = calculateTauJointLimit(q(1), 0.05, 4.0, joint_limits[1][1], joint_limits[1][0]);
+  tau_joint_limit(2) = calculateTauJointLimit(q(2), 0.05, 4.0, joint_limits[2][1], joint_limits[2][0]);
+  tau_joint_limit(3) = calculateTauJointLimit(q(3), 0.05, 4.0, joint_limits[3][1], joint_limits[3][0]);
+  tau_joint_limit(4) = calculateTauJointLimit(q(4), 0.05, 4.0, joint_limits[4][1], joint_limits[4][0]);
+  tau_joint_limit(5) = calculateTauJointLimit(q(5), 0.05, 4.0, joint_limits[5][1], joint_limits[5][0]);
+  tau_joint_limit(6) = calculateTauJointLimit(q(6), 0.05, 4.0, joint_limits[6][1], joint_limits[6][0]);
+
+
+
+for (int i = 0; i < 7; ++i) {
+    tau_joint_limit(i) = std::max(std::min(tau_joint_limit(i), 5.0), -5.0);
+}
+
+
   // Desired torque
   tau_d << tau_task + tau_nullspace + coriolis+ tau_joint_limit;
 
@@ -270,7 +284,6 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   tau_d << saturateTorqueRate(tau_d, tau_J_d);
   if (count_vibration<1000.0*duration_vibration){tau_d(6)=tau_d(6)+5.0*sin(100.0/1000.0*2.0*3.14*count_vibration);
   count_vibration=count_vibration+1;
-  //ROS_INFO_STREAM("count_vibration" << count_vibration << "tau" << tau_d);
 }
 
   for (size_t i = 0; i < 7; ++i) {
@@ -284,6 +297,19 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   orientation_d_ = Eigen::Quaterniond(aa_orientation_d);
 }
 
+
+double CartesianVariableImpedanceController::calculateTauJointLimit(double q_value, double threshold, double magnitude, double upper_bound, double lower_bound) {
+    double upper_limit = upper_bound - threshold;
+    double lower_limit = lower_bound + threshold;
+    if (q_value > (upper_limit)) {
+        return -magnitude * (std::exp( std::abs( q_value - upper_limit )/threshold) - 1);
+    } else if (q_value < lower_limit) {
+        return +magnitude * (std::exp( std::abs( q_value - lower_limit )/threshold) - 1);
+    } else {
+        return 0;
+    }
+}
+
 Eigen::Matrix<double, 7, 1> CartesianVariableImpedanceController::saturateTorqueRate(
     const Eigen::Matrix<double, 7, 1>& tau_d_calculated,
     const Eigen::Matrix<double, 7, 1>& tau_J_d) {  // NOLINT (readability-identifier-naming)
@@ -294,87 +320,6 @@ Eigen::Matrix<double, 7, 1> CartesianVariableImpedanceController::saturateTorque
         tau_J_d[i] + std::max(std::min(difference, delta_tau_max_), -delta_tau_max_);
   }
   return tau_d_saturated;
-}
-
-void CartesianVariableImpedanceController::equilibriumStiffnessCallback(
-    const std_msgs::Float32MultiArray::ConstPtr& stiffness_){
-
-  int i = 0;
-  // print all the remaining numbers
-  for(std::vector<float>::const_iterator it = stiffness_->data.begin(); it != stiffness_->data.end(); ++it)
-  {
-    stiff_[i] = *it;
-    i++;
-  }
-
-  cartesian_stiffness_target_(0,0)=std::max(std::min(stiff_[0], float(4000.0)), float(0.0));
-  cartesian_stiffness_target_(1,1)=std::max(std::min(stiff_[1], float(4000.0)), float(0.0));
-  cartesian_stiffness_target_(2,2)=std::max(std::min(stiff_[2], float(4000.0)), float(0.0));
-
-  cartesian_damping_target_(0,0)=2.0 * sqrt(cartesian_stiffness_target_(0,0));
-  cartesian_damping_target_(1,1)=2.0 * sqrt(cartesian_stiffness_target_(1,1));
-  cartesian_damping_target_(2,2)=2.0 * sqrt(cartesian_stiffness_target_(2,2));
-
-  cartesian_stiffness_target_(3,3)=std::max(std::min(stiff_[3], float(50.0)), float(0.0));
-  cartesian_stiffness_target_(4,4)=std::max(std::min(stiff_[4], float(50.0)), float(0.0));
-  cartesian_stiffness_target_(5,5)=std::max(std::min(stiff_[5], float(50.0)), float(0.0));
-
-  cartesian_damping_target_(3,3)=2.0 * sqrt(cartesian_stiffness_target_(3,3));
-  cartesian_damping_target_(4,4)=2.0 * sqrt(cartesian_stiffness_target_(4,4));
-  cartesian_damping_target_(5,5)=2.0 * sqrt(cartesian_stiffness_target_(5,5));
-
-  nullspace_stiffness_target_= std::max(std::min(stiff_[6], float(50.0)), float(0.0));
-
-
-  dynamic_reconfigure::Config set_Kx;
-  dynamic_reconfigure::DoubleParameter param_X_double;
-  param_X_double.name = "translational_stiffness_X";
-  param_X_double.value = cartesian_stiffness_target_(0,0);
-  set_Kx.doubles = {param_X_double};
-  pub_stiff_update_.publish(set_Kx);
-
-  dynamic_reconfigure::Config set_Ky;
-  dynamic_reconfigure::DoubleParameter param_Y_double;
-  param_Y_double.name = "translational_stiffness_Y";
-  param_Y_double.value = cartesian_stiffness_target_(1,1);
-  set_Ky.doubles = {param_Y_double};
-  pub_stiff_update_.publish(set_Ky);
-
-  dynamic_reconfigure::Config set_Kz;
-  dynamic_reconfigure::DoubleParameter param_Z_double;
-  param_Z_double.name = "translational_stiffness_Z";
-  param_Z_double.value = cartesian_stiffness_target_(2,2);
-  set_Kz.doubles = {param_Z_double};
-  pub_stiff_update_.publish(set_Kz);
-
-  dynamic_reconfigure::Config set_K_alpha;
-  dynamic_reconfigure::DoubleParameter param_alpha_double;
-  param_alpha_double.name = "rotational_stiffness_X";
-  param_alpha_double.value = cartesian_stiffness_target_(3,3);
-  set_K_alpha.doubles = {param_alpha_double};
-  pub_stiff_update_.publish(set_K_alpha);
-
-  dynamic_reconfigure::Config set_K_beta;
-  dynamic_reconfigure::DoubleParameter param_beta_double;
-  param_beta_double.name = "rotational_stiffness_Y";
-  param_beta_double.value = cartesian_stiffness_target_(4,4);
-  set_K_beta.doubles = {param_beta_double};
-  pub_stiff_update_.publish(set_K_beta);
-
-  dynamic_reconfigure::Config set_K_gamma;
-  dynamic_reconfigure::DoubleParameter param_gamma_double;
-  param_gamma_double.name = "rotational_stiffness_Z";
-  param_gamma_double.value = cartesian_stiffness_target_(5,5);
-  set_K_gamma.doubles = {param_gamma_double};
-  pub_stiff_update_.publish(set_K_gamma);
-
-  dynamic_reconfigure::Config set_nullspace;
-  dynamic_reconfigure::DoubleParameter param_nullspace_double;
-  param_nullspace_double.name = "nullspace_stiffness";
-  param_nullspace_double.value = nullspace_stiffness_target_;
-  set_nullspace.doubles = {param_nullspace_double};
-  pub_stiff_update_.publish(set_nullspace);
-
 }
 
 void CartesianVariableImpedanceController::complianceParamCallback(
