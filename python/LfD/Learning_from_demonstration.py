@@ -129,4 +129,4 @@ class LfD(Panda):
         self.recorded_traj = data['traj']
         self.recorded_ori = data['ori']
         self.recorded_gripper = data['grip']
-        self.filename=str(file)
+        self.filename=str(name)
