@@ -22,7 +22,7 @@ will make the last joint vibrate for 0.5 seconds.
 - **Read external forces**: The controller reads the external forces and torques from the robot and publish them in the topic /force_torque_ext. The message type is geometry_msgs/WrenchStamped. This value is already filtered as it is also compensating for the gravity, Coriolis and friction forces.
 
 ### Installation 
--Install Franka ROS from [here](https://frankaemika.github.io/docs/installation_linux.html)
+- Install Franka ROS from [here](https://frankaemika.github.io/docs/installation_linux.html)
 
 - Go the the catkin_ws where you install franka_ros
 ```
