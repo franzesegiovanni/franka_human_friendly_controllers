@@ -235,6 +235,12 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   // compute "orientation error"
   error.tail(3) << error_quaternion_angle_axis.axis() * error_quaternion_angle_axis.angle();
 
+  error[0]=std::max(-delta_lim_lin, std::min(error[0], delta_lim_lin));
+  error[1]=std::max(-delta_lim_lin, std::min(error[1], delta_lim_lin));
+  error[2]=std::max(-delta_lim_lin, std::min(error[2], delta_lim_lin));
+  error[3]=std::max(-delta_lim_ori, std::min(error[3], delta_lim_ori));
+  error[4]=std::max(-delta_lim_ori, std::min(error[4], delta_lim_ori));
+  error[5]=std::max(-delta_lim_ori, std::min(error[5], delta_lim_ori));
   // compute control
   // allocate variables
   Eigen::VectorXd tau_task(7), tau_nullspace(7), tau_d(7), null_vect(7), tau_joint_limit(7);
@@ -336,7 +342,8 @@ void CartesianVariableImpedanceController::complianceParamCallback(
   cartesian_damping_target_(4,4)=2.0 * sqrt(config.rotational_stiffness_Y);
   cartesian_damping_target_(5,5)=2.0 * sqrt(config.rotational_stiffness_Z);
   nullspace_stiffness_target_ = config.nullspace_stiffness;
-
+  delta_lim_lin=config.max_delta_lin;
+  delta_lim_ori=config.max_delta_ori;
   // Use this if you want to use rotation matrix to change the orientation of the stiffness matrix
   // Eigen::AngleAxisd rollAngle(config.roll, Eigen::Vector3d::UnitX());
   // Eigen::AngleAxisd yawAngle(config.yaw, Eigen::Vector3d::UnitZ());

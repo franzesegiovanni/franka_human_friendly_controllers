@@ -60,6 +60,8 @@ class CartesianVariableImpedanceController : public controller_interface::MultiI
   int filter_step{0};
   int filter_step_;
   const double delta_tau_max_{1.0};
+  double delta_lim_lin;
+  double delta_lim_ori;
   Eigen::Matrix<double, 6, 6> cartesian_stiffness_;
   Eigen::Matrix<double, 6, 6> cartesian_damping_;
   Eigen::Matrix<double, 7, 1> q_d_nullspace_;
@@ -103,9 +105,6 @@ class CartesianVariableImpedanceController : public controller_interface::MultiI
 
   ros::Publisher pub_cartesian_pose_;
   ros::Publisher pub_force_torque_;
-
-
-
 
 };
 
