@@ -7,13 +7,10 @@ LfD.home_gripper() # homeing the gripper allows to kinestheicall move it.
 rospy.sleep(5)
 #%%
 LfD.traj_rec()
-
 #%%
-# LfD.traj_rec_keyboard()
+LfD.save(name="demo")
 #%%
-LfD.save()
-#%%
-LfD.load()
+LfD.load(name="demo")
 #%%
 LfD.execute()
 # %%
