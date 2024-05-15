@@ -345,17 +345,17 @@ void CartesianVariableImpedanceController::complianceParamCallback(
   delta_lim_lin=config.max_delta_lin;
   delta_lim_ori=config.max_delta_ori;
   // Use this if you want to use rotation matrix to change the orientation of the stiffness matrix
-  // Eigen::AngleAxisd rollAngle(config.roll, Eigen::Vector3d::UnitX());
-  // Eigen::AngleAxisd yawAngle(config.yaw, Eigen::Vector3d::UnitZ());
-  // Eigen::AngleAxisd pitchAngle(config.pitch, Eigen::Vector3d::UnitY());
-  // Eigen::Quaternion<double> q = rollAngle *  pitchAngle * yawAngle;
-  // Eigen::Matrix3d StiffRotationMatrix = q.matrix();
+  Eigen::AngleAxisd rollAngle(config.roll, Eigen::Vector3d::UnitX());
+  Eigen::AngleAxisd yawAngle(config.yaw, Eigen::Vector3d::UnitZ());
+  Eigen::AngleAxisd pitchAngle(config.pitch, Eigen::Vector3d::UnitY());
+  Eigen::Quaternion<double> q = rollAngle *  pitchAngle * yawAngle;
+  Eigen::Matrix3d StiffRotationMatrix = q.matrix();
   
-  // cartesian_stiffness_target_.block(0, 0, 3, 3)=StiffRotationMatrix*cartesian_stiffness_target_.block(0, 0, 3, 3)*StiffRotationMatrix.transpose();
-  // cartesian_stiffness_target_.block(3, 3, 6, 6)=StiffRotationMatrix*cartesian_stiffness_target_.block(3, 3, 6, 6)*StiffRotationMatrix.transpose();
+  cartesian_stiffness_target_.block(0, 0, 3, 3)=StiffRotationMatrix*cartesian_stiffness_target_.block(0, 0, 3, 3)*StiffRotationMatrix.transpose();
+  cartesian_stiffness_target_.block(3, 3, 6, 6)=StiffRotationMatrix*cartesian_stiffness_target_.block(3, 3, 6, 6)*StiffRotationMatrix.transpose();
 
-  // cartesian_damping_target_.block(0, 0, 3, 3)=StiffRotationMatrix*cartesian_damping_target_.block(0, 0, 3, 3)*StiffRotationMatrix.transpose();
-  // cartesian_damping_target_.block(3, 3, 6, 6)=StiffRotationMatrix*cartesian_damping_target_.block(3, 3, 6, 6)*StiffRotationMatrix.transpose();
+  cartesian_damping_target_.block(0, 0, 3, 3)=StiffRotationMatrix*cartesian_damping_target_.block(0, 0, 3, 3)*StiffRotationMatrix.transpose();
+  cartesian_damping_target_.block(3, 3, 6, 6)=StiffRotationMatrix*cartesian_damping_target_.block(3, 3, 6, 6)*StiffRotationMatrix.transpose();
 
 }
 
