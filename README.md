@@ -75,11 +75,13 @@ To kill gazebo run:
 
 In a terminal with the workspace sourced, open vscode, be sure that you have the extension Jupyter installed and then run one by one the cells in python/LfD/main_lfd.py. You can record kinesthetic demonstration, save them, load them and then play them back. Every time you execute a skill, the robot goes back to the starting position of the demonstration.
 
-Do you want to control two arms at the same time using similar controllers? Check out [franka_bimanual_controllers](https://github.com/franzesegiovanni/franka_bimanual_controllers).
 
-Do you want to read the franka buttons in ROS. Check out [franka_button](https://github.com/franzesegiovanni/franka_buttons).
+# More cool stuff
+- Do you want to control two arms at the same time using similar controllers? Check out [franka_bimanual_controllers](https://github.com/franzesegiovanni/franka_bimanual_controllers).
 
-More learning from demonstration check out [ILoSA](https://github.com/franzesegiovanni/ILoSA), [SIMPLe](https://github.com/franzesegiovanni/SIMPLe) and [franka_learning_from_demonstration](https://github.com/platonics-delft/franka_learning_from_demonstrations).
+- Do you want to read the franka buttons in ROS? Check out [franka_buttons](https://github.com/franzesegiovanni/franka_buttons).
+
+- Do you want to do learning from demonstration? Check out [ILoSA](https://github.com/franzesegiovanni/ILoSA), [SIMPLe](https://github.com/franzesegiovanni/SIMPLe) and [franka_learning_from_demonstration](https://github.com/platonics-delft/franka_learning_from_demonstrations).
 
 # Cite us! 
 If you found this repo useful for your research, please cite it as:
@@ -93,8 +95,6 @@ If you found this repo useful for your research, please cite it as:
   year={2021},
   organization={IEEE}
 }
-```
-
 ```
 # Acknowledgements
 
