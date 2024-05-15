@@ -344,19 +344,6 @@ void CartesianVariableImpedanceController::complianceParamCallback(
   nullspace_stiffness_target_ = config.nullspace_stiffness;
   delta_lim_lin=config.max_delta_lin;
   delta_lim_ori=config.max_delta_ori;
-  // Use this if you want to use rotation matrix to change the orientation of the stiffness matrix
-  // Eigen::AngleAxisd rollAngle(config.roll, Eigen::Vector3d::UnitX());
-  // Eigen::AngleAxisd yawAngle(config.yaw, Eigen::Vector3d::UnitZ());
-  // Eigen::AngleAxisd pitchAngle(config.pitch, Eigen::Vector3d::UnitY());
-  // Eigen::Quaternion<double> q = rollAngle *  pitchAngle * yawAngle;
-  // Eigen::Matrix3d StiffRotationMatrix = q.matrix();
-  
-  // cartesian_stiffness_target_.block(0, 0, 3, 3)=StiffRotationMatrix*cartesian_stiffness_target_.block(0, 0, 3, 3)*StiffRotationMatrix.transpose();
-  // cartesian_stiffness_target_.block(3, 3, 6, 6)=StiffRotationMatrix*cartesian_stiffness_target_.block(3, 3, 6, 6)*StiffRotationMatrix.transpose();
-
-  // cartesian_damping_target_.block(0, 0, 3, 3)=StiffRotationMatrix*cartesian_damping_target_.block(0, 0, 3, 3)*StiffRotationMatrix.transpose();
-  // cartesian_damping_target_.block(3, 3, 6, 6)=StiffRotationMatrix*cartesian_damping_target_.block(3, 3, 6, 6)*StiffRotationMatrix.transpose();
-
 }
 
 
@@ -369,30 +356,6 @@ void CartesianVariableImpedanceController::equilibriumPoseCallback(
       msg->pose.orientation.z, msg->pose.orientation.w;
   if (last_orientation_d_.coeffs().dot(orientation_d_.coeffs()) < 0.0) {
     orientation_d_.coeffs() << -orientation_d_.coeffs();
-}
-}
-
-void CartesianVariableImpedanceController::StiffnessEllipsoidPoseCallback(
-    const geometry_msgs::PoseStampedConstPtr& msg) {
-      // This subscriver is used to receive a pose and rotate the rotation matrix of that amount
-  Eigen::Quaterniond last_orientation_d_stiff_(orientation_d_stiff_);
-  orientation_d_stiff_.coeffs() << msg->pose.orientation.x, msg->pose.orientation.y,
-      msg->pose.orientation.z, msg->pose.orientation.w;
-  if (last_orientation_d_stiff_.coeffs().dot(orientation_d_stiff_.coeffs()) < 0.0) {
-    orientation_d_stiff_.coeffs() << -orientation_d_stiff_.coeffs();
-
-  Eigen::Matrix3d StiffRotationMatrix = orientation_d_stiff_.toRotationMatrix(); 
-
-  // Eigen::Vector3d euler = orientation_d_stiff_.toRotationMatrix().eulerAngles(0, 1, 2);
-
-  cartesian_stiffness_target_.block(0, 0, 3, 3)=StiffRotationMatrix*cartesian_stiffness_target_.block(0, 0, 3, 3)*StiffRotationMatrix.transpose();
-  cartesian_stiffness_target_.block(3, 3, 6, 6)=StiffRotationMatrix*cartesian_stiffness_target_.block(3, 3, 6, 6)*StiffRotationMatrix.transpose();
-  // ROS_INFO_STREAM("stiffness translational matrix is:" << cartesian_stiffness_linear_target_rotated_ );
-
-  cartesian_damping_target_.block(0, 0, 3, 3)=StiffRotationMatrix*cartesian_damping_target_.block(0, 0, 3, 3)*StiffRotationMatrix.transpose();
-  cartesian_damping_target_.block(3, 3, 6, 6)=StiffRotationMatrix*cartesian_damping_target_.block(3, 3, 6, 6)*StiffRotationMatrix.transpose();
-  // ROS_INFO_STREAM("damping translational matrix is:" << cartesian_damping_linear_target_rotated_ );
-
 }
 }
 
