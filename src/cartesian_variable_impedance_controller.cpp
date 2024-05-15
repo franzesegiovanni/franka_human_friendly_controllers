@@ -23,9 +23,6 @@ bool CartesianVariableImpedanceController::init(hardware_interface::RobotHW* rob
   sub_equilibrium_config_ = node_handle.subscribe(
       "/equilibrium_configuration", 20, &CartesianVariableImpedanceController::equilibriumConfigurationCallback, this,
       ros::TransportHints().reliable().tcpNoDelay());
-  sub_rot_stiffness_ = node_handle.subscribe(
-    "/stiffness_rotation", 20, &CartesianVariableImpedanceController::StiffnessEllipsoidPoseCallback, this,
-    ros::TransportHints().reliable().tcpNoDelay());  
   sub_vibration_ = node_handle.subscribe(
       "/haptic_feedback", 20, &CartesianVariableImpedanceController::equilibriumVibrationCallback, this,
       ros::TransportHints().reliable().tcpNoDelay());

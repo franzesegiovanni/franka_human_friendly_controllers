@@ -94,8 +94,6 @@ class CartesianVariableImpedanceController : public controller_interface::MultiI
   ros::Subscriber sub_equilibrium_config_;
   void equilibriumConfigurationCallback( const std_msgs::Float32MultiArray::ConstPtr& joint);
 
-  ros::Subscriber sub_rot_stiffness_;
-  void StiffnessEllipsoidPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg);  
   // Make the robot to vibrate in the end effector
   ros::Subscriber sub_vibration_;
   void equilibriumVibrationCallback(const std_msgs::Float32::ConstPtr& vibration_);
