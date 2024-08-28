@@ -306,7 +306,7 @@ tau_default_joint_damping << -joint_default_damping_ * dq;
   // cartesian_damping_ = cartesian_damping_target_;
   cartesian_stiffness_ =cartesian_stiffness_+ 0.001*(cartesian_stiffness_target_-cartesian_stiffness_);
   cartesian_damping_ =cartesian_damping_+ 0.001*(cartesian_damping_target_-cartesian_damping_);
-  nullspace_stiffness_ = nullspace_stiffness_target_;
+  nullspace_stiffness_ = nullspace_stiffness_+ 0.001*(nullspace_stiffness_target_-nullspace_stiffness_);
   Eigen::AngleAxisd aa_orientation_d(orientation_d_);
   orientation_d_ = Eigen::Quaterniond(aa_orientation_d);
 }
