@@ -145,7 +145,10 @@ void CartesianVariableImpedanceController::starting(const ros::Time& /*time*/) {
   std::array<double, 42> jacobian_array =
       model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
   // convert to eigen
+    std::array<double, 42> jacobian_array_adaptive =
+      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
   Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian(jacobian_array.data());
+    Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian_adaptive(jacobian_array_adaptive.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > dq_initial(initial_state.dq.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > q_initial(initial_state.q.data());
   Eigen::Affine3d initial_transform(Eigen::Matrix4d::Map(initial_state.O_T_EE.data()));
@@ -168,13 +171,22 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   Eigen::Map<Eigen::Matrix<double, 7, 7> > mass(mass_array.data());
   std::array<double, 42> jacobian_array =
       model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+  std::array<double, 42> jacobian_array_adaptive =
+      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
 
   // convert to Eigen
   Eigen::Map<Eigen::Matrix<double, 7, 1> > coriolis(coriolis_array.data());
   Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian(jacobian_array.data());
+  Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian_adaptive(jacobian_array_adaptive.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > q(robot_state.q.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > dq(robot_state.dq.data());
   double time_=ros::Time::now().toSec();
+
+  // this line allows to have the nullspace active in the degree of freedom that do not have stiffness anymore. 
+  //So if you pull the cartesian stiffness down, the control goes from cartesian plus nullspace control to pure joint control
+  for(int i=0; i<6; i++){
+     if (cartesian_stiffness_target_(i,i)==0){
+        for(int j=0; j<7; j++){ jacobian_adaptive(i, j) = 0; } }}
 
   Eigen::Map<Eigen::Matrix<double, 7, 1> > tau_J_d(  // NOLINT (readability-identifier-naming)
       robot_state.tau_J_d.data());
@@ -185,7 +197,9 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   Eigen::Quaterniond orientation(transform.linear());
   Eigen::Matrix<double, 7, 1>  tau_f;
   Eigen::MatrixXd jacobian_transpose_pinv;
+  Eigen::MatrixXd jacobian_transpose_pinv_adaptive;
   pseudoInverse(jacobian.transpose(), jacobian_transpose_pinv);
+  pseudoInverse(jacobian_adaptive.transpose(), jacobian_transpose_pinv_adaptive);
   // Compute the value of the friction
   tau_f(0) =  FI_11/(1+exp(-FI_21*(dq(0)+FI_31))) - TAU_F_CONST_1;
   tau_f(1) =  FI_12/(1+exp(-FI_22*(dq(1)+FI_32))) - TAU_F_CONST_2;
@@ -240,7 +254,7 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   error[5]=std::max(-delta_lim_ori, std::min(error[5], delta_lim_ori));
   // compute control
   // allocate variables
-  Eigen::VectorXd tau_task(7), tau_nullspace(7), tau_d(7), null_vect(7), tau_joint_limit(7);
+  Eigen::VectorXd tau_task(7), tau_nullspace(7), tau_d(7), null_vect(7), tau_joint_limit(7), tau_joint_limit_nullspace(7), tau_joint_limit_ns(7), tau_default_joint_damping(7), tau_vibration(7);
 
   // pseudoinverse for nullspace handling
   // kinematic pseuoinverse
@@ -255,43 +269,47 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
                   (-cartesian_stiffness_ * error -  cartesian_damping_ * (jacobian * dq)); //double critic damping
   // nullspace PD control with damping ratio = 1
   tau_nullspace << (Eigen::MatrixXd::Identity(7, 7) -
-                    jacobian.transpose() * jacobian_transpose_pinv) *
+                    jacobian_adaptive.transpose() * jacobian_transpose_pinv_adaptive) *
                        (nullspace_stiffness_ * null_vect -
                         (2.0 * sqrt(nullspace_stiffness_)) * dq); //double critic damping
   tau_joint_limit.setZero();
-
+  tau_joint_limit_nullspace.setZero();
   // (double q_value, double threshold, double magnitude, double upper_bound, double lower_bound) 
-  tau_joint_limit(0) = calculateTauJointLimit(q(0), 0.05, 4.0, joint_limits[0][1], joint_limits[0][0]); 
-  tau_joint_limit(1) = calculateTauJointLimit(q(1), 0.05, 4.0, joint_limits[1][1], joint_limits[1][0]);
-  tau_joint_limit(2) = calculateTauJointLimit(q(2), 0.05, 4.0, joint_limits[2][1], joint_limits[2][0]);
-  tau_joint_limit(3) = calculateTauJointLimit(q(3), 0.05, 4.0, joint_limits[3][1], joint_limits[3][0]);
-  tau_joint_limit(4) = calculateTauJointLimit(q(4), 0.05, 4.0, joint_limits[4][1], joint_limits[4][0]);
-  tau_joint_limit(5) = calculateTauJointLimit(q(5), 0.05, 4.0, joint_limits[5][1], joint_limits[5][0]);
-  tau_joint_limit(6) = calculateTauJointLimit(q(6), 0.05, 4.0, joint_limits[6][1], joint_limits[6][0]);
-
-
 
 for (int i = 0; i < 7; ++i) {
+    tau_joint_limit(i) = calculateTauJointLimit(q(i), 0.05, 4.0, joint_limits[i][1], joint_limits[i][0]);
+    tau_joint_limit_nullspace(i) = calculateTauJointLimit(q(i), 0.1, 4.0, joint_limits[i][1], joint_limits[i][0]);
     tau_joint_limit(i) = std::max(std::min(tau_joint_limit(i), 5.0), -5.0);
+    tau_joint_limit_nullspace(i) = std::max(std::min(tau_joint_limit_nullspace(i), 5.0), -5.0);
 }
 
+tau_joint_limit_ns << (Eigen::MatrixXd::Identity(7, 7) -
+                    jacobian.transpose() * jacobian_transpose_pinv) *
+                       tau_joint_limit_nullspace;
 
+tau_default_joint_damping.setZero();
+tau_default_joint_damping << -joint_default_damping_ * dq;
+
+tau_vibration.setZero();
+if (count_vibration<1000.0*duration_vibration){
+  tau_vibration(5)=2.0*sin(100.0/1000.0*2.0*3.14*count_vibration);
+  tau_vibration(6)=2.0*sin(100.0/1000.0*2.0*3.14*count_vibration);
+count_vibration=count_vibration+1;}
   // Desired torque
-  tau_d << tau_task + tau_nullspace + coriolis+ tau_joint_limit;
+  tau_d << tau_task + tau_nullspace + coriolis+ tau_joint_limit+ tau_joint_limit_ns+ tau_default_joint_damping + tau_vibration;
 
   // Saturate torque rate to avoid discontinuities
   tau_d << saturateTorqueRate(tau_d, tau_J_d);
-  if (count_vibration<1000.0*duration_vibration){tau_d(6)=tau_d(6)+5.0*sin(100.0/1000.0*2.0*3.14*count_vibration);
-  count_vibration=count_vibration+1;
-}
 
   for (size_t i = 0; i < 7; ++i) {
     joint_handles_[i].setCommand(tau_d(i));
   }
 
-  cartesian_stiffness_ =cartesian_stiffness_target_;
-  cartesian_damping_ = cartesian_damping_target_;
-  nullspace_stiffness_ = nullspace_stiffness_target_;
+  // cartesian_stiffness_ =cartesian_stiffness_target_;
+  // cartesian_damping_ = cartesian_damping_target_;
+  cartesian_stiffness_ =cartesian_stiffness_+ 0.02*(cartesian_stiffness_target_-cartesian_stiffness_);
+  cartesian_damping_ =cartesian_damping_+ 0.02*(cartesian_damping_target_-cartesian_damping_);
+  nullspace_stiffness_ = nullspace_stiffness_+ 0.02*(nullspace_stiffness_target_-nullspace_stiffness_);
   Eigen::AngleAxisd aa_orientation_d(orientation_d_);
   orientation_d_ = Eigen::Quaterniond(aa_orientation_d);
 }
@@ -338,6 +356,7 @@ void CartesianVariableImpedanceController::complianceParamCallback(
   cartesian_damping_target_(3,3)=2.0 * sqrt(config.rotational_stiffness_X);
   cartesian_damping_target_(4,4)=2.0 * sqrt(config.rotational_stiffness_Y);
   cartesian_damping_target_(5,5)=2.0 * sqrt(config.rotational_stiffness_Z);
+  joint_default_damping_=config.joint_default_damping;
   nullspace_stiffness_target_ = config.nullspace_stiffness;
   delta_lim_lin=config.max_delta_lin;
   delta_lim_ori=config.max_delta_ori;
