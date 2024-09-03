@@ -254,7 +254,7 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   error[5]=std::max(-delta_lim_ori, std::min(error[5], delta_lim_ori));
   // compute control
   // allocate variables
-  Eigen::VectorXd tau_task(7), tau_nullspace(7), tau_d(7), null_vect(7), tau_joint_limit(7), tau_joint_limit_nullspace(7), tau_joint_limit_ns(7), tau_default_joint_damping(7);
+  Eigen::VectorXd tau_task(7), tau_nullspace(7), tau_d(7), null_vect(7), tau_joint_limit(7), tau_joint_limit_nullspace(7), tau_joint_limit_ns(7), tau_default_joint_damping(7), tau_vibration(7);
 
   // pseudoinverse for nullspace handling
   // kinematic pseuoinverse
@@ -289,14 +289,17 @@ tau_joint_limit_ns << (Eigen::MatrixXd::Identity(7, 7) -
 
 tau_default_joint_damping.setZero();
 tau_default_joint_damping << -joint_default_damping_ * dq;
+
+tau_vibration.setZero();
+if (count_vibration<1000.0*duration_vibration){
+  tau_vibration(5)=2.0*sin(100.0/1000.0*2.0*3.14*count_vibration);
+  tau_vibration(6)=2.0*sin(100.0/1000.0*2.0*3.14*count_vibration);
+count_vibration=count_vibration+1;}
   // Desired torque
-  tau_d << tau_task + tau_nullspace + coriolis+ tau_joint_limit+ tau_joint_limit_ns+ tau_default_joint_damping;
+  tau_d << tau_task + tau_nullspace + coriolis+ tau_joint_limit+ tau_joint_limit_ns+ tau_default_joint_damping + tau_vibration;
 
   // Saturate torque rate to avoid discontinuities
   tau_d << saturateTorqueRate(tau_d, tau_J_d);
-  if (count_vibration<1000.0*duration_vibration){tau_d(6)=tau_d(6)+5.0*sin(100.0/1000.0*2.0*3.14*count_vibration);
-  count_vibration=count_vibration+1;
-}
 
   for (size_t i = 0; i < 7; ++i) {
     joint_handles_[i].setCommand(tau_d(i));
@@ -304,9 +307,9 @@ tau_default_joint_damping << -joint_default_damping_ * dq;
 
   // cartesian_stiffness_ =cartesian_stiffness_target_;
   // cartesian_damping_ = cartesian_damping_target_;
-  cartesian_stiffness_ =cartesian_stiffness_+ 0.001*(cartesian_stiffness_target_-cartesian_stiffness_);
-  cartesian_damping_ =cartesian_damping_+ 0.001*(cartesian_damping_target_-cartesian_damping_);
-  nullspace_stiffness_ = nullspace_stiffness_+ 0.001*(nullspace_stiffness_target_-nullspace_stiffness_);
+  cartesian_stiffness_ =cartesian_stiffness_+ 0.02*(cartesian_stiffness_target_-cartesian_stiffness_);
+  cartesian_damping_ =cartesian_damping_+ 0.02*(cartesian_damping_target_-cartesian_damping_);
+  nullspace_stiffness_ = nullspace_stiffness_+ 0.02*(nullspace_stiffness_target_-nullspace_stiffness_);
   Eigen::AngleAxisd aa_orientation_d(orientation_d_);
   orientation_d_ = Eigen::Quaterniond(aa_orientation_d);
 }
