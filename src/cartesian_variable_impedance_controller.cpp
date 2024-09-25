@@ -333,9 +333,10 @@ Eigen::Matrix<double, 7, 1> CartesianVariableImpedanceController::saturateTorque
   Eigen::Matrix<double, 7, 1> tau_d_saturated{};
   for (size_t i = 0; i < 7; i++) {
     double difference = tau_d_calculated[i] - tau_J_d[i];
-    tau_d_saturated[i] =
-        tau_J_d[i] + std::max(std::min(difference, delta_tau_max_), -delta_tau_max_);
+    tau_d_saturated[i] = tau_J_d[i] + std::max(std::min(difference, delta_tau_max_), -delta_tau_max_);
+  
   }
+  tau_d_saturated[6]=std::max(std::min(tau_d_saturated[6], 5.0), -5.0);
   return tau_d_saturated;
 }
 
