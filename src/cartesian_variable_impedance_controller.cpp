@@ -254,7 +254,7 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   error[5]=std::max(-delta_lim_ori, std::min(error[5], delta_lim_ori));
   // compute control
   // allocate variables
-  Eigen::VectorXd tau_task(7), tau_nullspace(7), tau_d(7), null_vect(7), tau_joint_limit(7), tau_joint_limit_nullspace(7), tau_joint_limit_ns(7), tau_default_joint_damping(7), tau_vibration(7);
+  Eigen::VectorXd tau_task(7), tau_nullspace(7), tau_d(7), null_vect(7), tau_joint_limit(7), tau_joint_limit_nullspace(7), tau_joint_limit_ns(7), tau_default_joint_damping(7), tau_vibration(7), tau_default_last_joint_damping(7);
 
   // pseudoinverse for nullspace handling
   // kinematic pseuoinverse
@@ -289,6 +289,9 @@ tau_joint_limit_ns << (Eigen::MatrixXd::Identity(7, 7) -
 
 tau_default_joint_damping.setZero();
 tau_default_joint_damping << -joint_default_damping_ * dq;
+tau_default_last_joint_damping.setZero();
+tau_default_last_joint_damping(6) = -last_joint_default_damping_ * dq(6);
+
 
 tau_vibration.setZero();
 if (count_vibration<1000.0*duration_vibration){
@@ -296,7 +299,7 @@ if (count_vibration<1000.0*duration_vibration){
   tau_vibration(6)=2.0*sin(100.0/1000.0*2.0*3.14*count_vibration);
 count_vibration=count_vibration+1;}
   // Desired torque
-  tau_d << tau_task + tau_nullspace + coriolis+ tau_joint_limit+ tau_joint_limit_ns+ tau_default_joint_damping + tau_vibration;
+  tau_d << tau_task + tau_nullspace + coriolis+ tau_joint_limit+ tau_joint_limit_ns+ tau_default_joint_damping + tau_default_last_joint_damping + tau_vibration;
 
   // Saturate torque rate to avoid discontinuities
   tau_d << saturateTorqueRate(tau_d, tau_J_d);
@@ -333,9 +336,10 @@ Eigen::Matrix<double, 7, 1> CartesianVariableImpedanceController::saturateTorque
   Eigen::Matrix<double, 7, 1> tau_d_saturated{};
   for (size_t i = 0; i < 7; i++) {
     double difference = tau_d_calculated[i] - tau_J_d[i];
-    tau_d_saturated[i] =
-        tau_J_d[i] + std::max(std::min(difference, delta_tau_max_), -delta_tau_max_);
+    tau_d_saturated[i] = tau_J_d[i] + std::max(std::min(difference, delta_tau_max_), -delta_tau_max_);
+  
   }
+  // tau_d_saturated[6]=std::max(std::min(tau_d_saturated[6], 5.0), -5.0);
   return tau_d_saturated;
 }
 
@@ -357,6 +361,7 @@ void CartesianVariableImpedanceController::complianceParamCallback(
   cartesian_damping_target_(4,4)=2.0 * sqrt(config.rotational_stiffness_Y);
   cartesian_damping_target_(5,5)=2.0 * sqrt(config.rotational_stiffness_Z);
   joint_default_damping_=config.joint_default_damping;
+  last_joint_default_damping_=config.last_joint_default_damping;
   nullspace_stiffness_target_ = config.nullspace_stiffness;
   delta_lim_lin=config.max_delta_lin;
   delta_lim_ori=config.max_delta_ori;
