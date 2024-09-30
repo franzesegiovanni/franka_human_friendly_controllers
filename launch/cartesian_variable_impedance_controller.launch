@@ -5,7 +5,7 @@
   <arg name="arm_id" default="panda" />
   <arg name="gui" default="true" />
 
-  <rosparam file="$(find franka_description)/robots/$(arg arm_id)/joint_limits.yaml" command="load"/>
+  <rosparam file="$(find franka_description_calibrated)/robots/$(arg arm_id)/joint_limits.yaml" command="load"/>
 
   <include file="$(find franka_human_friendly_controllers)/launch/franka_control.launch" >
     <arg name="robot_ip" value="$(arg robot_ip)" />
