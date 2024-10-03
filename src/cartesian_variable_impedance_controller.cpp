@@ -10,6 +10,26 @@
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
 #include <franka_human_friendly_controllers/pseudo_inversion.h>
+#include <franka_human_friendly_controllers/fk_panda.c>
+
+double* fk(double* joint_positions)
+{
+  int* setting_0 = new int[2];
+  double* setting_1 = new double[2];
+  int setting_2 = 0;
+
+  unsigned int nb_inputs = 1;
+  unsigned int nb_outputs = 1;
+
+  const double** input = new const double*[nb_inputs];
+  input[0] = joint_positions;
+  double** output = new double*[nb_outputs];
+  output[0] = new double[16];
+
+  casadi_f0(input, output, setting_0, setting_1, setting_2);
+  return output[0];
+}
+
 namespace franka_human_friendly_controllers {
 
 bool CartesianVariableImpedanceController::init(hardware_interface::RobotHW* robot_hw,
@@ -193,6 +213,14 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   Eigen::Map<Eigen::Matrix<double, 7, 1> > tau_ext(robot_state.tau_ext_hat_filtered.data());
   std::array<double, 7> gravity = model_handle_->getGravity();
   Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
+
+  double* T_0_hand = fk(q.data());
+  Eigen::Affine3d transform_external(Eigen::Matrix4d::Map(T_0_hand));
+  std::cout << "External fk..." << std::endl;
+  std::cout << transform_external.matrix() << std::endl;
+  std::cout << "Internal fk..." << std::endl;
+  std::cout << transform.matrix() << std::endl;
+
   Eigen::Vector3d position(transform.translation());
   Eigen::Quaterniond orientation(transform.linear());
   Eigen::Matrix<double, 7, 1>  tau_f;
