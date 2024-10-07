@@ -171,7 +171,10 @@ void CartesianVariableImpedanceController::starting(const ros::Time& /*time*/) {
     Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian_adaptive(jacobian_array_adaptive.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > dq_initial(initial_state.dq.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > q_initial(initial_state.q.data());
-  Eigen::Affine3d initial_transform(Eigen::Matrix4d::Map(initial_state.O_T_EE.data()));
+  Eigen::Affine3d initial_transform_internal(Eigen::Matrix4d::Map(initial_state.O_T_EE.data()));
+
+  double* T_0_hand = fk(q_initial.data());
+  Eigen::Affine3d initial_transform(Eigen::Matrix4d::Map(T_0_hand));
   // set equilibrium point to current state
   position_d_ = initial_transform.translation(); // this allows the robot to start on the starting configuration
   orientation_d_ = Eigen::Quaterniond(initial_transform.linear()); // this allows the robot to start on the
@@ -212,14 +215,14 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
       robot_state.tau_J_d.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > tau_ext(robot_state.tau_ext_hat_filtered.data());
   std::array<double, 7> gravity = model_handle_->getGravity();
-  Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
+  Eigen::Affine3d transform_internal(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
 
   double* T_0_hand = fk(q.data());
-  Eigen::Affine3d transform_external(Eigen::Matrix4d::Map(T_0_hand));
+  Eigen::Affine3d transform(Eigen::Matrix4d::Map(T_0_hand));
   std::cout << "External fk..." << std::endl;
-  std::cout << transform_external.matrix() << std::endl;
-  std::cout << "Internal fk..." << std::endl;
   std::cout << transform.matrix() << std::endl;
+  std::cout << "Internal fk..." << std::endl;
+  std::cout << transform_internal.matrix() << std::endl;
 
   Eigen::Vector3d position(transform.translation());
   Eigen::Quaterniond orientation(transform.linear());
@@ -250,6 +253,7 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   pub_force_torque_.publish(force_torque_msg);
   
   geometry_msgs::PoseStamped pose_msg;
+  pose_msg.header.stamp = ros::Time::now();
   pose_msg.pose.position.x=position[0];
   pose_msg.pose.position.y=position[1];
   pose_msg.pose.position.z=position[2];

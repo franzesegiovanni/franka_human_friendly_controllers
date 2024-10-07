@@ -4,12 +4,14 @@
   <arg name="load_gripper" default="true" />
   <arg name="arm_id" default="panda" />
   <arg name="gui" default="true" />
+  <arg name="use_calibrated_description" default="false" />
 
   <rosparam file="$(find franka_description)/robots/$(arg arm_id)/joint_limits.yaml" command="load"/>
 
   <include file="$(find franka_human_friendly_controllers)/launch/franka_control.launch" >
     <arg name="robot_ip" value="$(arg robot_ip)" />
     <arg name="load_gripper" value="$(arg load_gripper)" />
+    <arg name="use_calibrated_description" value="$(arg use_calibrated_description)" />
   </include>
 
   <rosparam command="load" file="$(find franka_human_friendly_controllers)/config/franka_human_friendly_controllers.yaml" />
