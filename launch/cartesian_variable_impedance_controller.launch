@@ -4,18 +4,24 @@
   <arg name="load_gripper" default="true" />
   <arg name="arm_id" default="panda" />
   <arg name="gui" default="true" />
-  <arg name="use_calibrated_description" default="false" />
+  <arg name="use_external_model" default="false" />
 
   <rosparam file="$(find franka_description)/robots/$(arg arm_id)/joint_limits.yaml" command="load"/>
 
   <include file="$(find franka_human_friendly_controllers)/launch/franka_control.launch" >
     <arg name="robot_ip" value="$(arg robot_ip)" />
     <arg name="load_gripper" value="$(arg load_gripper)" />
-    <arg name="use_calibrated_description" value="$(arg use_calibrated_description)" />
+    <arg name="use_external_model" value="$(arg use_external_model)" />
   </include>
 
   <rosparam command="load" file="$(find franka_human_friendly_controllers)/config/franka_human_friendly_controllers.yaml" />
-  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="cartesian_variable_impedance_controller"/>
+  
+  <group if="$(arg use_external_model)">
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="cartesian_variable_impedance_external_model_controller"/>
+  </group>
+  <group unless="$(arg use_external_model)">
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="cartesian_variable_impedance_controller"/>
+  </group>
   <group if="$(arg gui)">
     <node pkg="rviz" type="rviz" output="screen" name="rviz" args="-d $(find franka_human_friendly_controllers)/launch/rviz/franka_description_with_marker.rviz"/>
     <node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" required="false" />

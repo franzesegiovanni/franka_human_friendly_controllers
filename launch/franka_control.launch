@@ -4,12 +4,12 @@
   <arg name="arm_id" default="panda" />
   <arg name="load_gripper" default="true" />
   <arg name="xacro_args" default="" />
-  <arg name="use_calibrated_description" default="false" />
+  <arg name="use_external_model" default="false" />
 
-  <group unless="$(eval use_calibrated_description)">
+  <group unless="$(eval use_external_model)">
     <param name="robot_description" command="$(find xacro)/xacro $(find franka_description)/robots/$(arg arm_id)/$(arg arm_id).urdf.xacro hand:=$(arg load_gripper) arm_id:=$(arg arm_id) $(arg xacro_args)" />
   </group>
-  <group unless="$(eval use_calibrated_description)">
+  <group unless="$(eval use_external_model)">
     <param name="robot_description" command="$(find xacro)/xacro $(find franka_description)/robots/$(arg arm_id)/$(arg arm_id).urdf.xacro hand:=$(arg load_gripper) arm_id:=$(arg arm_id) $(arg xacro_args)" />
   </group>
                                                                             

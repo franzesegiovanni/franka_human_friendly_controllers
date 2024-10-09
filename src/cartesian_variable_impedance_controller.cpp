@@ -35,9 +35,18 @@ double* fk(double* joint_positions)
 
 namespace franka_human_friendly_controllers {
 
+void CartesianVariableImpedanceController::loadModel() {
+  std::cout << "Loading nothing as we are using the internal model" << std::endl;
+}
+
 std::array<double, 42> CartesianVariableImpedanceController::get_jacobian()
 {
       return model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+}
+
+double* CartesianVariableImpedanceController::get_fk(franka::RobotState robot_state)
+{
+  return robot_state.O_T_EE.data();
 }
 
 bool CartesianVariableImpedanceController::init(hardware_interface::RobotHW* robot_hw,
@@ -162,6 +171,8 @@ bool CartesianVariableImpedanceController::init(hardware_interface::RobotHW* rob
         ROS_INFO("Joint %d: lower=%.4f, upper=%.4f", i + 1, joint_limits[i][0], joint_limits[i][1]);
     }
 
+  this->loadModel();
+
   return true;
 }
 
@@ -177,10 +188,14 @@ void CartesianVariableImpedanceController::starting(const ros::Time& /*time*/) {
   Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian_adaptive(jacobian_array_adaptive.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > dq_initial(initial_state.dq.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > q_initial(initial_state.q.data());
-  Eigen::Affine3d initial_transform_internal(Eigen::Matrix4d::Map(initial_state.O_T_EE.data()));
+  double* T_EE = this->get_fk(initial_state);
 
+  Eigen::Affine3d initial_transform(Eigen::Matrix4d::Map(T_EE));
+
+  /*
   double* T_0_hand = fk(q_initial.data());
   Eigen::Affine3d initial_transform(Eigen::Matrix4d::Map(T_0_hand));
+  */
   // set equilibrium point to current state
   position_d_ = initial_transform.translation(); // this allows the robot to start on the starting configuration
   orientation_d_ = Eigen::Quaterniond(initial_transform.linear()); // this allows the robot to start on the
@@ -341,7 +356,8 @@ count_vibration=count_vibration+1;}
   tau_d << saturateTorqueRate(tau_d, tau_J_d);
 
   for (size_t i = 0; i < 7; ++i) {
-    joint_handles_[i].setCommand(tau_d(i));
+    //joint_handles_[i].setCommand(tau_d(i));
+    std::cout << "tau_d(" << i << "): " << tau_d(i) << std::endl;
   }
 
   // cartesian_stiffness_ =cartesian_stiffness_target_;
