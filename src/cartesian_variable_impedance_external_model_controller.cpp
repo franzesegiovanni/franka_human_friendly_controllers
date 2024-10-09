@@ -24,18 +24,17 @@ void CartesianVariableImpedanceExternalModelController::loadModel() {
   pinocchio::Data data_pin_(model_pin_);
 }
 
-
 double* CartesianVariableImpedanceExternalModelController::get_fk(franka::RobotState robot_state)
 {
-
-  // update the model
-  //const auto& frame_name = model.frames[frame_id].name;
-  Eigen::Map<Eigen::Matrix<double, 7, 1> > q(robot_state.q.data());
+  Eigen::Map<Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
   std::cout << q << std::endl;
   pinocchio::forwardKinematics(model_pin_, data_pin_, q);
   const auto& transformation = data_pin_.oMf[5];  // Get the transformation of the frame
-  std::cout << q << std::endl;
-  return new double[16];
+  
+  // Allocate memory for the result
+  double* result = new double[16];
+  std::memcpy(result, transformation.toHomogeneousMatrix().data(), 16 * sizeof(double));
+  return result; // Caller is responsible for deleting the allocated memory
 }
 
 }  // namespace franka_human_friendly_controllers
