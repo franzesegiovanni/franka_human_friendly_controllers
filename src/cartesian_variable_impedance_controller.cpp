@@ -30,7 +30,15 @@ double* fk(double* joint_positions)
   return output[0];
 }
 
+
+
+
 namespace franka_human_friendly_controllers {
+
+std::array<double, 42> CartesianVariableImpedanceController::get_jacobian()
+{
+      return model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+}
 
 bool CartesianVariableImpedanceController::init(hardware_interface::RobotHW* robot_hw,
                                                ros::NodeHandle& node_handle) {
@@ -162,13 +170,11 @@ void CartesianVariableImpedanceController::starting(const ros::Time& /*time*/) {
   // to initial configuration
   franka::RobotState initial_state = state_handle_->getRobotState();
   // get jacobian
-  std::array<double, 42> jacobian_array =
-      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+  std::array<double, 42> jacobian_array = this->get_jacobian();
   // convert to eigen
-    std::array<double, 42> jacobian_array_adaptive =
-      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+  std::array<double, 42> jacobian_array_adaptive = this->get_jacobian();
   Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian(jacobian_array.data());
-    Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian_adaptive(jacobian_array_adaptive.data());
+  Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian_adaptive(jacobian_array_adaptive.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > dq_initial(initial_state.dq.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > q_initial(initial_state.q.data());
   Eigen::Affine3d initial_transform_internal(Eigen::Matrix4d::Map(initial_state.O_T_EE.data()));
@@ -192,10 +198,8 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   std::array<double, 7> coriolis_array = model_handle_->getCoriolis();
   std::array<double, 49> mass_array = model_handle_->getMass();
   Eigen::Map<Eigen::Matrix<double, 7, 7> > mass(mass_array.data());
-  std::array<double, 42> jacobian_array =
-      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
-  std::array<double, 42> jacobian_array_adaptive =
-      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+  std::array<double, 42> jacobian_array = this->get_jacobian();
+  std::array<double, 42> jacobian_array_adaptive = this->get_jacobian();
 
   // convert to Eigen
   Eigen::Map<Eigen::Matrix<double, 7, 1> > coriolis(coriolis_array.data());

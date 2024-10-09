@@ -45,6 +45,7 @@ class CartesianVariableImpedanceController : public controller_interface::MultiI
   const Eigen::Matrix<double, 7, 1>& tau_J_d);  // NOLINT (readability-identifier-naming)
 
   double calculateTauJointLimit(double q_value, double threshold, double magnitude, double upper_bound, double lower_bound);
+  std::array<double, 42> get_jacobian();
 
 
 
