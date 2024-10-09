@@ -81,7 +81,7 @@
     <child link="panda_link1_sc" />
   </joint>
   <joint name="panda_joint1" type="revolute">
-    <origin rpy="8.689992944594739e-17 -6.332846994001553e-16 5.614519598369499e-16" xyz="1.1531650953807166e-15 -2.253583251838131e-15 0.3330000000000007" />
+    <origin rpy="-0.003983554629324744 -3.0445592280821456e-06 -1.415091495734401e-16" xyz="1.0781376906493187e-16 -1.8834554812913657e-16 0.3330000000000003" />
     <parent link="panda_link0" />
     <child link="panda_link1" />
     <axis xyz="0 0 1" />
@@ -130,7 +130,7 @@
     <child link="panda_link2_sc" />
   </joint>
   <joint name="panda_joint2" type="revolute">
-    <origin rpy="-1.5721416508473902 0.0009573864347817382 3.823257403467354e-10" xyz="5.696995638674702e-05 -0.0002634498797404347 6.917207119953859e-16" />
+    <origin rpy="-1.5727904750994823 0.0012540685707349425 1.1013797442415149e-06" xyz="0.00016341912877901506 -0.00017156737387569485 5.375629426571536e-16" />
     <parent link="panda_link1" />
     <child link="panda_link2" />
     <axis xyz="0 0 1" />
@@ -179,7 +179,7 @@
     <child link="panda_link3_sc" />
   </joint>
   <joint name="panda_joint3" type="revolute">
-    <origin rpy="1.5724328190952739 -0.0006556894920200575 0.0010361370595500133" xyz="-0.0002565789851127319 -0.3147667827649975 -0.0002634497074263931" />
+    <origin rpy="1.572162461367731 0.0006574297825724241 0.001194814825299022" xyz="0.0001299051404350041 -0.3135816347471088 -0.00017155993521596554" />
     <parent link="panda_link2" />
     <child link="panda_link3" />
     <axis xyz="0 0 1" />
@@ -228,7 +228,7 @@
     <child link="panda_link4_sc" />
   </joint>
   <joint name="panda_joint4" type="revolute">
-    <origin rpy="1.5722982502162635 0.00995312287323032 0.0007071007819809249" xyz="0.08166443899594983 -0.0006500261150543214 -0.0012330556900883628" />
+    <origin rpy="1.5730691786583635 0.012312431691333916 -0.0006583382654092967" xyz="0.08146886587596877 7.5485817626186065e-06 -0.0024217097938806077" />
     <parent link="panda_link3" />
     <child link="panda_link4" />
     <axis xyz="0 0 1" />
@@ -295,7 +295,7 @@
     <child link="panda_link5_sc" />
   </joint>
   <joint name="panda_joint5" type="revolute">
-    <origin rpy="-1.570646370598403 0.005749460637451966 -0.00995328920600513" xyz="-0.07758573855528328 0.3833417065524507 0.0006512790375435742" />
+    <origin rpy="-1.5699403519499557 0.005136687763343844 -0.01071152681808784" xyz="-0.07777374924834445 0.3814887482917348 5.983080398729339e-06" />
     <parent link="panda_link4" />
     <child link="panda_link5" />
     <axis xyz="0 0 1" />
@@ -344,7 +344,7 @@
     <child link="panda_link6_sc" />
   </joint>
   <joint name="panda_joint6" type="revolute">
-    <origin rpy="1.5720232741058109 0.0005556844933160503 0.005694638729896513" xyz="0.0007127391949080696 0.00030073005130449627 -0.0005943891456318758" />
+    <origin rpy="1.5705975004428918 -0.0003904054404951994 0.005129001217567927" xyz="0.000550003505381384 2.4422161132276864e-05 -0.002451620682018998" />
     <parent link="panda_link5" />
     <child link="panda_link6" />
     <axis xyz="0 0 1" />
@@ -411,7 +411,7 @@
     <child link="panda_link7_sc" />
   </joint>
   <joint name="panda_joint7" type="revolute">
-    <origin rpy="1.5703799854533402 -1.360390199411339e-07 -0.00032263196956828496" xyz="0.09008118106813627 -0.00259304223142981 -0.000295911280479944" />
+    <origin rpy="1.570874805280769 -8.16444341763457e-07 0.00028739172352703387" xyz="0.08896699606060197 0.0011974566380215954 -2.2321885163227118e-05" />
     <parent link="panda_link6" />
     <child link="panda_link7" />
     <axis xyz="0 0 1" />
@@ -491,9 +491,103 @@
   
   <link name="panda_hand_tcp" />
   <joint name="panda_hand_tcp_joint" type="fixed">
-    <origin rpy="0.0 0.0 0.0" xyz="0.0003609507208606793 0.00017059979976771745 0.13099237856829304" />
-    
+    <origin rpy="0 0 0" xyz="0 0 0.1034" />
     <parent link="panda_hand" />
     <child link="panda_hand_tcp" />
+  </joint>
+  <link name="panda_ball" />
+  <joint name="panda_tcp_ball_joint" type="fixed">
+    <origin rpy="0.0 0.0 0.0" xyz="-4.985383226574662e-05 -0.00013336514178627587 0.028808917565181256" />
+    
+    <parent link="panda_hand_tcp" />
+    <child link="panda_ball" />
+  </joint>
+  <link name="panda_leftfinger">
+    <visual>
+      <geometry>
+        <mesh filename="package://franka_description/meshes/visual/finger.dae" />
+      </geometry>
+    </visual>
+    
+    <collision>
+      <origin rpy="0 0 0" xyz="0 18.5e-3 11e-3" />
+      <geometry>
+        <box size="22e-3 15e-3 20e-3" />
+      </geometry>
+    </collision>
+    
+    <collision>
+      <origin rpy="0 0 0" xyz="0 6.8e-3 2.2e-3" />
+      <geometry>
+        <box size="22e-3 8.8e-3 3.8e-3" />
+      </geometry>
+    </collision>
+    
+    <collision>
+      <origin rpy="0.5235987755982988 0 0" xyz="0 15.9e-3 28.35e-3" />
+      <geometry>
+        <box size="17.5e-3 7e-3 23.5e-3" />
+      </geometry>
+    </collision>
+    
+    <collision>
+      <origin rpy="0 0 0" xyz="0 7.58e-3 45.25e-3" />
+      <geometry>
+        <box size="17.5e-3 15.2e-3 18.5e-3" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="panda_rightfinger">
+    <visual>
+      <origin rpy="0 0 3.141592653589793" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="package://franka_description/meshes/visual/finger.dae" />
+      </geometry>
+    </visual>
+    
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -18.5e-3 11e-3" />
+      <geometry>
+        <box size="22e-3 15e-3 20e-3" />
+      </geometry>
+    </collision>
+    
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -6.8e-3 2.2e-3" />
+      <geometry>
+        <box size="22e-3 8.8e-3 3.8e-3" />
+      </geometry>
+    </collision>
+    
+    <collision>
+      <origin rpy="-0.5235987755982988 0 0" xyz="0 -15.9e-3 28.35e-3" />
+      <geometry>
+        <box size="17.5e-3 7e-3 23.5e-3" />
+      </geometry>
+    </collision>
+    
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -7.58e-3 45.25e-3" />
+      <geometry>
+        <box size="17.5e-3 15.2e-3 18.5e-3" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="panda_finger_joint1" type="prismatic">
+    <parent link="panda_hand" />
+    <child link="panda_leftfinger" />
+    <origin rpy="0 0 0" xyz="0 0 0.0584" />
+    <axis xyz="0 1 0" />
+    <limit effort="100" lower="0.0" upper="0.04" velocity="0.2" />
+    <dynamics damping="0.3" />
+  </joint>
+  <joint name="panda_finger_joint2" type="prismatic">
+    <parent link="panda_hand" />
+    <child link="panda_rightfinger" />
+    <origin rpy="0 0 0" xyz="0 0 0.0584" />
+    <axis xyz="0 -1 0" />
+    <limit effort="100" lower="0.0" upper="0.04" velocity="0.2" />
+    <mimic joint="panda_finger_joint1" />
+    <dynamics damping="0.3" />
   </joint>
 </robot>

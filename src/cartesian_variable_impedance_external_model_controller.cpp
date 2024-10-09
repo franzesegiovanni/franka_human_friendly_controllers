@@ -26,7 +26,7 @@ void CartesianVariableImpedanceExternalModelController::loadModel() {
 
 double* CartesianVariableImpedanceExternalModelController::get_fk(franka::RobotState robot_state)
 {
-  Eigen::Map<Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
+  Eigen::Map<Eigen::Matrix<double, 9, 1>> q(robot_state.q.data());
   Eigen::VectorXd q_vector = Eigen::VectorXd::Map(q.data(), q.size());
   int frame_id = model_pin_.getFrameId("panda_hand");
 
