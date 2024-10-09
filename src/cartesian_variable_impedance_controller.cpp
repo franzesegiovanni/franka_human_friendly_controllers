@@ -173,6 +173,7 @@ void CartesianVariableImpedanceController::starting(const ros::Time& /*time*/) {
 
   Eigen::Affine3d initial_transform(Eigen::Matrix4d::Map(T_EE));
   
+  
 
   /*
   double* T_0_hand = fk(q_initial.data());
@@ -333,8 +334,8 @@ count_vibration=count_vibration+1;}
   tau_d << saturateTorqueRate(tau_d, tau_J_d);
 
   for (size_t i = 0; i < 7; ++i) {
-    //joint_handles_[i].setCommand(tau_d(i));
-    std::cout << "tau_d(" << i << "): " << tau_d(i) << std::endl;
+    joint_handles_[i].setCommand(tau_d(i));
+    //std::cout << "tau_d(" << i << "): " << tau_d(i) << std::endl;
   }
 
   // cartesian_stiffness_ =cartesian_stiffness_target_;

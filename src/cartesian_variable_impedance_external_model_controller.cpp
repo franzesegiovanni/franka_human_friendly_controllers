@@ -19,17 +19,20 @@ void CartesianVariableImpedanceExternalModelController::loadModel() {
   std::cout << urdf_path_ << std::endl;
 
   std::cout << "Loading urdf into pinocchio as we are using the urdf model" << std::endl;
-  pinocchio::Model model_pin_;
   pinocchio::urdf::buildModel(urdf_path_, model_pin_);
-  pinocchio::Data data_pin_(model_pin_);
+  data_pin_ = new pinocchio::Data(model_pin_);
+  std::cout << "Succesfully loaded the model and created the data pointer." << std::endl;
 }
 
 double* CartesianVariableImpedanceExternalModelController::get_fk(franka::RobotState robot_state)
 {
   Eigen::Map<Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
-  std::cout << q << std::endl;
-  pinocchio::forwardKinematics(model_pin_, data_pin_, q);
-  const auto& transformation = data_pin_.oMf[5];  // Get the transformation of the frame
+  Eigen::VectorXd q_vector = Eigen::VectorXd::Map(q.data(), q.size());
+  int frame_id = model_pin_.getFrameId("panda_hand");
+
+  pinocchio::forwardKinematics(model_pin_, *data_pin_, q_vector);
+  pinocchio::updateFramePlacement(model_pin_, *data_pin_, frame_id);
+  const auto& transformation = data_pin_->oMf[frame_id];  // Get the transformation of the frame
   
   // Allocate memory for the result
   double* result = new double[16];
