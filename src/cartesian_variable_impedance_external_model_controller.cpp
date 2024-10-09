@@ -28,7 +28,7 @@ double* CartesianVariableImpedanceExternalModelController::get_fk(franka::RobotS
 {
   Eigen::Map<Eigen::Matrix<double, 9, 1>> q(robot_state.q.data());
   Eigen::VectorXd q_vector = Eigen::VectorXd::Map(q.data(), q.size());
-  int frame_id = model_pin_.getFrameId("panda_hand");
+  int frame_id = model_pin_.getFrameId("panda_hand_tcp");
 
   pinocchio::forwardKinematics(model_pin_, *data_pin_, q_vector);
   pinocchio::updateFramePlacement(model_pin_, *data_pin_, frame_id);
