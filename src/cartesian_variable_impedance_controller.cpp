@@ -20,7 +20,7 @@ void CartesianVariableImpedanceController::loadModel() {
   std::cout << "Loading nothing as we are using the internal model" << std::endl;
 }
 
-std::array<double, 42> CartesianVariableImpedanceController::get_jacobian()
+std::array<double, 42> CartesianVariableImpedanceController::get_jacobian(franka::RobotState robot_state)
 {
       return model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
 }
@@ -162,9 +162,9 @@ void CartesianVariableImpedanceController::starting(const ros::Time& /*time*/) {
   // to initial configuration
   franka::RobotState initial_state = state_handle_->getRobotState();
   // get jacobian
-  std::array<double, 42> jacobian_array = this->get_jacobian();
+  std::array<double, 42> jacobian_array = this->get_jacobian(initial_state);
   // convert to eigen
-  std::array<double, 42> jacobian_array_adaptive = this->get_jacobian();
+  std::array<double, 42> jacobian_array_adaptive = this->get_jacobian(initial_state);
   Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian(jacobian_array.data());
   Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian_adaptive(jacobian_array_adaptive.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > dq_initial(initial_state.dq.data());
@@ -196,8 +196,8 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   std::array<double, 7> coriolis_array = model_handle_->getCoriolis();
   std::array<double, 49> mass_array = model_handle_->getMass();
   Eigen::Map<Eigen::Matrix<double, 7, 7> > mass(mass_array.data());
-  std::array<double, 42> jacobian_array = this->get_jacobian();
-  std::array<double, 42> jacobian_array_adaptive = this->get_jacobian();
+  std::array<double, 42> jacobian_array = this->get_jacobian(robot_state);
+  std::array<double, 42> jacobian_array_adaptive = this->get_jacobian(robot_state);
 
   // convert to Eigen
   Eigen::Map<Eigen::Matrix<double, 7, 1> > coriolis(coriolis_array.data());

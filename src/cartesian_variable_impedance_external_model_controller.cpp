@@ -9,7 +9,6 @@
 #include <franka_human_friendly_controllers/cartesian_variable_impedance_external_model_controller.h>
 #include <ros/package.h>
 
-
 namespace franka_human_friendly_controllers {
 
 
@@ -17,6 +16,8 @@ void CartesianVariableImpedanceExternalModelController::loadModel() {
   std::string package_path = ros::package::getPath("franka_human_friendly_controllers");
   urdf_path_ = package_path + "/urdf/panda_calibrated_grounded.urdf";
   std::cout << urdf_path_ << std::endl;
+  ros::param::get("frame_name", frame_name_);
+  frame_id_ = model_pin_.getFrameId(frame_name_);
 
   std::cout << "Loading urdf into pinocchio as we are using the urdf model" << std::endl;
   pinocchio::urdf::buildModel(urdf_path_, model_pin_);
@@ -28,16 +29,32 @@ double* CartesianVariableImpedanceExternalModelController::get_fk(franka::RobotS
 {
   Eigen::Map<Eigen::Matrix<double, 9, 1>> q(robot_state.q.data());
   Eigen::VectorXd q_vector = Eigen::VectorXd::Map(q.data(), q.size());
-  int frame_id = model_pin_.getFrameId("panda_hand_tcp");
+
 
   pinocchio::forwardKinematics(model_pin_, *data_pin_, q_vector);
-  pinocchio::updateFramePlacement(model_pin_, *data_pin_, frame_id);
-  const auto& transformation = data_pin_->oMf[frame_id];  // Get the transformation of the frame
+  pinocchio::updateFramePlacement(model_pin_, *data_pin_, frame_id_);
+  const auto& transformation = data_pin_->oMf[frame_id_];  // Get the transformation of the frame
   
   // Allocate memory for the result
   double* result = new double[16];
   std::memcpy(result, transformation.toHomogeneousMatrix().data(), 16 * sizeof(double));
   return result; // Caller is responsible for deleting the allocated memory
+}
+
+std::array<double, 42> CartesianVariableImpedanceExternalModelController::get_jacobian(franka::RobotState robot_state)
+{
+  Eigen::Map<Eigen::Matrix<double, 9, 1>> q(robot_state.q.data());
+  Eigen::VectorXd q_vector = Eigen::VectorXd::Map(q.data(), q.size());
+  Eigen::MatrixXd jacobian(6, model_pin_.nv);  // 6xnv matrix for spatial Jacobian
+  jacobian.fill(0);  // Initialize to zero
+
+
+  pinocchio::computeJointJacobians(model_pin_, *data_pin_, q_vector);
+  //pinocchio::updateFramePlacements(model_pin_, *data_pin_);
+  pinocchio::getFrameJacobian(model_pin_, *data_pin_, frame_id_, pinocchio::WORLD, jacobian);
+  std::array<double, 42> result;
+  std::memcpy(result.data(), jacobian.data(), 42 * sizeof(double));
+  return result;
 }
 
 }  // namespace franka_human_friendly_controllers

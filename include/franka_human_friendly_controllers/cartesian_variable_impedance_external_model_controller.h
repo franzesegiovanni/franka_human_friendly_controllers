@@ -11,8 +11,12 @@ class CartesianVariableImpedanceExternalModelController : public CartesianVariab
     std::string urdf_path_;
     pinocchio::Model model_pin_;
     pinocchio::Data* data_pin_;
+    std::string frame_name_;
+    int frame_id_;
+
   public:
     double* get_fk(franka::RobotState robot_state) override;
+    std::array<double, 42> get_jacobian(franka::RobotState robot_state) override;
     void loadModel() override;
 };
 
