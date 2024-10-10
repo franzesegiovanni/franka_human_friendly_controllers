@@ -15,12 +15,11 @@ namespace franka_human_friendly_controllers {
 void CartesianVariableImpedanceExternalModelController::loadModel() {
   std::string package_path = ros::package::getPath("franka_human_friendly_controllers");
   urdf_path_ = package_path + "/urdf/panda_calibrated_grounded.urdf";
-  std::cout << urdf_path_ << std::endl;
   ros::param::get("frame_name", frame_name_);
-  frame_id_ = model_pin_.getFrameId(frame_name_);
 
   std::cout << "Loading urdf into pinocchio as we are using the urdf model" << std::endl;
   pinocchio::urdf::buildModel(urdf_path_, model_pin_);
+  frame_id_ = model_pin_.getFrameId(frame_name_);
   data_pin_ = new pinocchio::Data(model_pin_);
   std::cout << "Succesfully loaded the model and created the data pointer." << std::endl;
 }
@@ -49,9 +48,10 @@ std::array<double, 42> CartesianVariableImpedanceExternalModelController::get_ja
   jacobian.fill(0);  // Initialize to zero
 
 
+  pinocchio::forwardKinematics(model_pin_, *data_pin_, q_vector);
   pinocchio::computeJointJacobians(model_pin_, *data_pin_, q_vector);
   //pinocchio::updateFramePlacements(model_pin_, *data_pin_);
-  pinocchio::getFrameJacobian(model_pin_, *data_pin_, frame_id_, pinocchio::WORLD, jacobian);
+  pinocchio::getFrameJacobian(model_pin_, *data_pin_, frame_id_, pinocchio::LOCAL_WORLD_ALIGNED, jacobian);
   std::array<double, 42> result;
   std::memcpy(result.data(), jacobian.data(), 42 * sizeof(double));
   return result;

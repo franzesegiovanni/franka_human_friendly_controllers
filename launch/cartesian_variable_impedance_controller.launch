@@ -17,6 +17,7 @@
   <rosparam command="load" file="$(find franka_human_friendly_controllers)/config/franka_human_friendly_controllers.yaml" />
   
   <group if="$(arg use_external_model)">
+    <param name="frame_name" value="panda_hand_tcp"/>
     <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="cartesian_variable_impedance_external_model_controller"/>
   </group>
   <group unless="$(arg use_external_model)">
