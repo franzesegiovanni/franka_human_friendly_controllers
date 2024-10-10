@@ -9,4 +9,9 @@
     A controller that renders a spring damper system in joint space.
     </description>
   </class>
+  <class name="franka_human_friendly_controllers/CartesianVariableImpedanceExternalModelController" type="franka_human_friendly_controllers::CartesianVariableImpedanceExternalModelController" base_class_type="controller_interface::ControllerBase">
+    <description>
+      A controller that renders a spring damper system in cartesian space using an external urdf file as a model for forward kinematics and jacobian computation.
+    </description>
+  </class>
 </library>
