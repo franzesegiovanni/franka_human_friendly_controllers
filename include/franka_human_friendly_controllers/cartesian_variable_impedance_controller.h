@@ -37,6 +37,7 @@ class CartesianVariableImpedanceController : public controller_interface::MultiI
   bool init(hardware_interface::RobotHW* robot_hw, ros::NodeHandle& node_handle) override;
   void starting(const ros::Time&) override;
   void update(const ros::Time&, const ros::Duration& period) override;
+  virtual void loadModel();
 
  private:
   // Saturation
@@ -45,7 +46,8 @@ class CartesianVariableImpedanceController : public controller_interface::MultiI
   const Eigen::Matrix<double, 7, 1>& tau_J_d);  // NOLINT (readability-identifier-naming)
 
   double calculateTauJointLimit(double q_value, double threshold, double magnitude, double upper_bound, double lower_bound);
-
+  virtual std::array<double, 42> get_jacobian(franka::RobotState robot_state);
+  virtual double* get_fk(franka::RobotState robot_state);
 
 
   std::unique_ptr<franka_hw::FrankaStateHandle> state_handle_;

@@ -10,7 +10,25 @@
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
 #include <franka_human_friendly_controllers/pseudo_inversion.h>
+
+
+
+
 namespace franka_human_friendly_controllers {
+
+void CartesianVariableImpedanceController::loadModel() {
+  std::cout << "Loading nothing as we are using the internal model" << std::endl;
+}
+
+std::array<double, 42> CartesianVariableImpedanceController::get_jacobian(franka::RobotState robot_state)
+{
+      return model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+}
+
+double* CartesianVariableImpedanceController::get_fk(franka::RobotState robot_state)
+{
+  return robot_state.O_T_EE.data();
+}
 
 bool CartesianVariableImpedanceController::init(hardware_interface::RobotHW* robot_hw,
                                                ros::NodeHandle& node_handle) {
@@ -134,6 +152,8 @@ bool CartesianVariableImpedanceController::init(hardware_interface::RobotHW* rob
         ROS_INFO("Joint %d: lower=%.4f, upper=%.4f", i + 1, joint_limits[i][0], joint_limits[i][1]);
     }
 
+  this->loadModel();
+
   return true;
 }
 
@@ -142,16 +162,23 @@ void CartesianVariableImpedanceController::starting(const ros::Time& /*time*/) {
   // to initial configuration
   franka::RobotState initial_state = state_handle_->getRobotState();
   // get jacobian
-  std::array<double, 42> jacobian_array =
-      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+  std::array<double, 42> jacobian_array = this->get_jacobian(initial_state);
   // convert to eigen
-    std::array<double, 42> jacobian_array_adaptive =
-      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+  std::array<double, 42> jacobian_array_adaptive = this->get_jacobian(initial_state);
   Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian(jacobian_array.data());
-    Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian_adaptive(jacobian_array_adaptive.data());
+  Eigen::Map<Eigen::Matrix<double, 6, 7> > jacobian_adaptive(jacobian_array_adaptive.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > dq_initial(initial_state.dq.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > q_initial(initial_state.q.data());
-  Eigen::Affine3d initial_transform(Eigen::Matrix4d::Map(initial_state.O_T_EE.data()));
+  double* T_EE = this->get_fk(initial_state);
+
+  Eigen::Affine3d initial_transform(Eigen::Matrix4d::Map(T_EE));
+  
+  
+
+  /*
+  double* T_0_hand = fk(q_initial.data());
+  Eigen::Affine3d initial_transform(Eigen::Matrix4d::Map(T_0_hand));
+  */
   // set equilibrium point to current state
   position_d_ = initial_transform.translation(); // this allows the robot to start on the starting configuration
   orientation_d_ = Eigen::Quaterniond(initial_transform.linear()); // this allows the robot to start on the
@@ -169,10 +196,8 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   std::array<double, 7> coriolis_array = model_handle_->getCoriolis();
   std::array<double, 49> mass_array = model_handle_->getMass();
   Eigen::Map<Eigen::Matrix<double, 7, 7> > mass(mass_array.data());
-  std::array<double, 42> jacobian_array =
-      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
-  std::array<double, 42> jacobian_array_adaptive =
-      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+  std::array<double, 42> jacobian_array = this->get_jacobian(robot_state);
+  std::array<double, 42> jacobian_array_adaptive = this->get_jacobian(robot_state);
 
   // convert to Eigen
   Eigen::Map<Eigen::Matrix<double, 7, 1> > coriolis(coriolis_array.data());
@@ -192,7 +217,10 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
       robot_state.tau_J_d.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1> > tau_ext(robot_state.tau_ext_hat_filtered.data());
   std::array<double, 7> gravity = model_handle_->getGravity();
-  Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
+  double* T_EE = this->get_fk(robot_state);
+
+  Eigen::Affine3d transform(Eigen::Matrix4d::Map(T_EE));
+
   Eigen::Vector3d position(transform.translation());
   Eigen::Quaterniond orientation(transform.linear());
   Eigen::Matrix<double, 7, 1>  tau_f;
@@ -222,6 +250,7 @@ void CartesianVariableImpedanceController::update(const ros::Time& /*time*/,
   pub_force_torque_.publish(force_torque_msg);
   
   geometry_msgs::PoseStamped pose_msg;
+  pose_msg.header.stamp = ros::Time::now();
   pose_msg.pose.position.x=position[0];
   pose_msg.pose.position.y=position[1];
   pose_msg.pose.position.z=position[2];
@@ -306,6 +335,7 @@ count_vibration=count_vibration+1;}
 
   for (size_t i = 0; i < 7; ++i) {
     joint_handles_[i].setCommand(tau_d(i));
+    //std::cout << "tau_d(" << i << "): " << tau_d(i) << std::endl;
   }
 
   // cartesian_stiffness_ =cartesian_stiffness_target_;
@@ -339,7 +369,7 @@ Eigen::Matrix<double, 7, 1> CartesianVariableImpedanceController::saturateTorque
     tau_d_saturated[i] = tau_J_d[i] + std::max(std::min(difference, delta_tau_max_), -delta_tau_max_);
   
   }
-  // tau_d_saturated[6]=std::max(std::min(tau_d_saturated[6], 5.0), -5.0);
+  tau_d_saturated[6]=std::max(std::min(tau_d_saturated[6], 5.0), -5.0);
   return tau_d_saturated;
 }
 
