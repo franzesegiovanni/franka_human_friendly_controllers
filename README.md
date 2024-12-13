@@ -24,18 +24,19 @@ will make the last joint vibrate for 0.5 seconds.
 ### Installation 
 - Install Franka ROS from [here](https://frankaemika.github.io/docs/installation_linux.html)
 
-- Go the the catkin_ws where you install franka_ros
-```
-cd /path/to/catkin_ws
-```
-- Install the human-friendly controller:
-
+- Go the the catkin_ws and clone franka_ros from source
 ```
 cd catkin_ws/src
+git clone https://github.com/frankaemika/franka_ros.git
+```
+- Clone the human-friendly controller and the install:
+
+```
 git clone https://github.com/franzesegiovanni/franka_human_friendly_controllers.git
 cd .. 
 catkin build -DMAKE_BUILD_TYPE=Release -DFranka_DIR:PATH=~/libfranka/build
 ```
+To check the compatibility of the franka ros and the libfranka, please give a look [here](https://frankaemika.github.io/docs/compatibility.html).
 
 To run the controller:
 - Switch on your Panda robot (make sure the gripper is initialized correctly), unlock its joints (and activate the FCI).
@@ -56,15 +57,15 @@ If you have an FR3 then run
 
  selecting the right arm_id is important for set correctly the joint limit repulsion.
 
-## Run with calibrated kinematic model. 
+## Run with calibrated kinematic model
 This repo allows to use an external model for the urdf that is stored in the folder urdf with the name 'panda.urdf'. To do that you simply do:
  ```
  roslaunch franka_human_friendly_controllers cartesian_variable_impedance_controller.launch robot_ip:=ROBOT_IP use_external_model:=True
  ```
 
- To find the calibrated model for the franka, you can use this other repository: 
+ To find the calibrated model for the franka, you can use this [other repository]( https://github.com/platonics-delft/kinematics_calibration). 
 
- https://github.com/platonics-delft/kinematics_calibration. This repo will simply generate a new panda.urdf that you can place in the folder urdf. 
+ This repo will simply generate a new panda.urdf that you can use to replace the one in the urdf folder. 
 
 # Run this in Gazebo simulation
 After building the catkin_ws and sourced the environment, you can run the following python code to set up the files such that to be able to run the code in simulation.
