@@ -10,7 +10,7 @@
     <param name="robot_description" command="$(find xacro)/xacro $(find franka_description)/robots/$(arg arm_id)/$(arg arm_id).urdf.xacro hand:=$(arg load_gripper) arm_id:=$(arg arm_id) $(arg xacro_args)" />
   </group>
   <group if="$(eval use_external_model)">
-    <param name="robot_description" textfile="$(find franka_human_friendly_controllers)/urdf/panda_calibrated_grounded.urdf"/>
+    <param name="robot_description" textfile="$(find franka_human_friendly_controllers)/urdf/panda.urdf"/>
 
   </group>
                                                                             

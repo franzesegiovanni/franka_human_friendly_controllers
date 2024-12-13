@@ -56,6 +56,16 @@ If you have an FR3 then run
 
  selecting the right arm_id is important for set correctly the joint limit repulsion.
 
+## Run with calibrated kinematic model. 
+This repo allows to use an external model for the urdf that is stored in the folder urdf with the name 'panda.urdf'. To do that you simply do:
+ ```
+ roslaunch franka_human_friendly_controllers cartesian_variable_impedance_controller.launch robot_ip:=ROBOT_IP use_external_model:=True
+ ```
+
+ To find the calibrated model for the franka, you can use this other repository: 
+
+ https://github.com/platonics-delft/kinematics_calibration. This repo will simply generate a new panda.urdf that you can place in the folder urdf. 
+
 # Run this in Gazebo simulation
 After building the catkin_ws and sourced the environment, you can run the following python code to set up the files such that to be able to run the code in simulation.
 ``` python3 setup_gazebo.py ```. 
