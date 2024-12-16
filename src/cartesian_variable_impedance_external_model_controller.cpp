@@ -14,7 +14,7 @@ namespace franka_human_friendly_controllers {
 
 void CartesianVariableImpedanceExternalModelController::loadModel() {
   std::string package_path = ros::package::getPath("franka_human_friendly_controllers");
-  urdf_path_ = package_path + "/urdf/panda.urdf";
+  urdf_path_ = package_path + "/urdf/panda_calibrated.urdf";
   ros::param::get("frame_name", frame_name_);
 
   std::cout << "Loading urdf into pinocchio as we are using the urdf model" << std::endl;
