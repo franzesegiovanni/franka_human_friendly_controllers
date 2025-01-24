@@ -95,7 +95,7 @@ search_and_paste(file_path, existing_depend, new_depend)
 file_path = franka_hfc +  '/src/cartesian_variable_impedance_controller.cpp'
 print("Change files in directory")
 print(file_path)
-search_line= 'tau_d << tau_task + tau_nullspace + coriolis+ tau_joint_limit;'
+search_line= 'tau_d << tau_task + tau_nullspace + coriolis+ tau_joint_limit+ tau_joint_limit_ns+ tau_default_joint_damping + tau_default_last_joint_damping + tau_vibration;'
 new_line='tau_d << tau_task + tau_nullspace + coriolis;'
 replace_line(file_path, search_line, new_line)
 
@@ -109,7 +109,7 @@ replace_line(file_path, search_line, new_line)
 
 
 # MODIFY THE CLOCK
-file_path = franka_gazebo +  '/launch/robot.launch'
+file_path = franka_gazebo +  '/launch/panda.launch'
 search_line = '<arg name="use_sim_time" value="true"/>'
 new_line = '    <arg name="use_sim_time" value="false"/>'
 print("Change files in directory")
@@ -122,3 +122,6 @@ print(file_path)
 existing_depend='</include>'
 new_depend='<node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" required="false" />'
 search_and_paste(file_path, existing_depend, new_depend)
+new_depend='<rosparam file="$(find franka_description)/robots/panda/joint_limits.yaml" command="load"/>'
+search_and_paste(file_path, existing_depend, new_depend)
+ 
