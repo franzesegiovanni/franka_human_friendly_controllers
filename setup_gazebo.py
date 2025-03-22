@@ -92,20 +92,20 @@ new_depend = '  franka_human_friendly_controllers'
 search_and_paste(file_path, existing_depend, new_depend)
 
 # Modify the controller to not have the joint repulsion that generated obscillations in sumulation 
-file_path = franka_hfc +  '/src/cartesian_variable_impedance_controller.cpp'
-print("Change files in directory")
-print(file_path)
-search_line= 'tau_d << tau_task + tau_nullspace + coriolis+ tau_joint_limit+ tau_joint_limit_ns+ tau_default_joint_damping + tau_default_last_joint_damping + tau_vibration;'
-new_line='tau_d << tau_task + tau_nullspace + coriolis;'
-replace_line(file_path, search_line, new_line)
+# file_path = franka_hfc +  '/src/cartesian_variable_impedance_controller.cpp'
+# print("Change files in directory")
+# print(file_path)
+# search_line= 'tau_d << tau_task + tau_nullspace + coriolis+ tau_joint_limit+ tau_joint_limit_ns+ tau_default_joint_damping + tau_default_last_joint_damping + tau_vibration;'
+# new_line='tau_d << tau_task + tau_nullspace + coriolis;'
+# replace_line(file_path, search_line, new_line)
 
-# Modify the joint impedance control also
-file_path = franka_hfc + '/src/joint_variable_impedance_controller.cpp'
-print("Change files in directory")
-print(file_path)
-search_line= 'tau_d << tau_joint + coriolis + tau_joint_limit;'
-new_line='tau_d << tau_joint + coriolis;'
-replace_line(file_path, search_line, new_line)
+# # Modify the joint impedance control also
+# file_path = franka_hfc + '/src/joint_variable_impedance_controller.cpp'
+# print("Change files in directory")
+# print(file_path)
+# search_line= 'tau_d << tau_joint + coriolis + tau_joint_limit;'
+# new_line='tau_d << tau_joint + coriolis;'
+# replace_line(file_path, search_line, new_line)
 
 
 # MODIFY THE CLOCK
